@@ -10,6 +10,7 @@
 #ifndef __MASS_H__
 #define __MASS_H__
 
+#include <iostream>
 #include <vector>
 
 class Mass {
@@ -19,7 +20,7 @@ public:
     Mass();  // default constructor
     // constructor with parameters:
     Mass(float, std::vector<float>, std::vector<float>, std::vector<float>);
-    ~Mass();  // destructor
+    ~Mass() {}  // destructor
     Mass(const Mass&);  // copy constructor
     Mass& operator=(const Mass&);  // overloaded assignment operator
 
@@ -28,7 +29,7 @@ public:
     friend bool operator!=(const Mass&, const Mass&);
 
     // overloaded ostream operator
-    friend ostream& operator<<(ostream&, const Mass&);
+    friend std::ostream& operator<<(std::ostream&, const Mass&);
 
     // getter/setter functions:
     float get_mass() const { return mass; }
@@ -52,7 +53,7 @@ public:
     float z() const { return pos[2]; }
 
     // function to free unused memory in member vectors
-    void shrink_vectors() const;
+    void shrink_vectors();
 
 private:
 

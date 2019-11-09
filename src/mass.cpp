@@ -45,17 +45,19 @@ Mass& Mass::operator=(const Mass& rhs) {
     if (this == &rhs) return *this;
 
     mass = rhs.get_mass();
-    pos = acc.get_pos();
-    vel = acc.get_vel();
+    pos = rhs.get_pos();
+    vel = rhs.get_vel();
     acc = rhs.get_acc();
 
     shrink_vectors();
+
+    return *this;
 }
 
 // overloaded ostream operator
-ostream& operator<<(ostream& os, Mass& m) {
+std::ostream& operator<<(std::ostream& os, const Mass& m) {
     os << "\tmass: " << m.get_mass() << " kg\n";
-    os << "\tpos: " << m.x() << " " << m.y() << " " m.z() " (m)\n";
+    os << "\tpos: " << m.x() << " " << m.y() << " " << m.z() << " (m)\n";
     os << "\tvel: " << m.get_vel()[0] << " ";
     os << m.get_vel()[1] << " " << m.get_vel()[2] << " (m/s)\n";
     os << "\tacc: " << m.get_acc()[0] << " ";
@@ -68,12 +70,12 @@ ostream& operator<<(ostream& os, Mass& m) {
  * just compares mass for equality right now
  * TODO: decide if more needs to be compared or if this is sufficient
  */
-inline bool operator==(const Mass& lhs, const Mass& rhs) {
-    return (lhs.get_mass == rhs.get_mass);
+bool operator==(const Mass& lhs, const Mass& rhs) {
+    return (lhs.get_mass() == rhs.get_mass());
 }
 
 // overloaded inequality operator
-inline bool operator!=(const Mass& lhs, const Mass& rhs) {
+bool operator!=(const Mass& lhs, const Mass& rhs) {
     return !(lhs == rhs);
 }
 
