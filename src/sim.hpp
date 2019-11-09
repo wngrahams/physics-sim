@@ -4,6 +4,7 @@
  * General macros and functions for the project
  */
 
+#include <assert.h>
 #include <iostream>
 #include <vector>
 
