@@ -36,6 +36,8 @@
 *.x86_64
 *.hex
 sim
+test-mass
+test-spring
 
 # Debug files
 *.dSYM/
