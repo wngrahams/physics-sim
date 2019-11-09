@@ -27,6 +27,9 @@ public:
     friend bool operator==(const Mass&, const Mass&);  // equality
     friend bool operator!=(const Mass&, const Mass&);
 
+    // overloaded ostream operator
+    friend ostream& operator<<(ostream&, const Mass&);
+
     // getter/setter functions:
     float get_mass() const { return mass; }
     void set_mass(const float m) { mass = m; }

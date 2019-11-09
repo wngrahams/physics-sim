@@ -52,6 +52,17 @@ Mass& Mass::operator=(const Mass& rhs) {
     shrink_vectors();
 }
 
+// overloaded ostream operator
+ostream& operator<<(ostream& os, Mass& m) {
+    os << "\tmass: " << m.get_mass() << " kg\n";
+    os << "\tpos: " << m.x() << " " << m.y() << " " m.z() " (m)\n";
+    os << "\tvel: " << m.get_vel()[0] << " ";
+    os << m.get_vel()[1] << " " << m.get_vel()[2] << " (m/s)\n";
+    os << "\tacc: " << m.get_acc()[0] << " ";
+    os << m.get_acc()[1] << " " << m.get_acc()[2] << " (m/(s^2))\n";
+    return os;
+}
+
 /* overloaded equality operator
  * 
  * just compares mass for equality right now
