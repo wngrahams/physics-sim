@@ -1,7 +1,7 @@
 /*
- * sim.cpp
+ * test-mass.cpp
  *
- * main driver function for the project
+ * test program for Mass Class
  */
 
 #include "sim.hpp"

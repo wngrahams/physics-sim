@@ -1,7 +1,7 @@
 /*
  * mass.hpp
  *
- * Header file for mass object
+ * Header file for mass class
  *
  * A mass represents an object with posistion and mass, which can have a force
  * applied to give it acceleration and velocity.
