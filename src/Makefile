@@ -9,8 +9,8 @@ CXXFLAGS = -g -Wall -std=c++11 $(INCLUDES)
 LDFLAGS = -g
 LDLIBS  =
 
-executables = sim
-objects = mass.o sim.o
+executables = sim test-mass
+objects = mass.o sim.o test-mass.o
 
 .PHONY: default
 default: $(executables)

@@ -7,7 +7,6 @@
 #include "sim.hpp"
 
 int main() {
-    /*
     Mass *m0 = new Mass();
     std::cout << *m0 << std::endl;
     std::vector<float> p1 = {1.1f, -1.1f, 7.5f};
@@ -28,10 +27,7 @@ int main() {
     delete m0;
     delete m1;
     delete m2;
-    */
-
-    // Jarrett do stuff here
-
+    
     return 0;
 }
 
