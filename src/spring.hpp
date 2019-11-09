@@ -10,6 +10,7 @@
 #ifndef __SPRING_H__
 #define __SPRING_H__
 
+#include <assert.h>
 #include <iostream>
 #include <vector>
 
