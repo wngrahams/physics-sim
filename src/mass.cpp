@@ -22,6 +22,7 @@ Mass::Mass(float m, std::vector<float> p,
                     std::vector<float> v, 
                     std::vector<float> a) {
     
+    assert(m >= 0);
     mass = m;
     pos = p;
     vel = v;
@@ -44,7 +45,7 @@ Mass::Mass(const Mass& M) {
 Mass& Mass::operator=(const Mass& rhs) {
     if (this == &rhs) return *this;
 
-    mass = rhs.get_mass();
+    this->set_mass(rhs.get_mass());
     pos = rhs.get_pos();
     vel = rhs.get_vel();
     acc = rhs.get_acc();

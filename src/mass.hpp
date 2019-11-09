@@ -10,6 +10,7 @@
 #ifndef __MASS_H__
 #define __MASS_H__
 
+#include <assert.h>
 #include <iostream>
 #include <vector>
 
@@ -33,7 +34,7 @@ public:
 
     // getter/setter functions:
     float get_mass() const { return mass; }
-    void set_mass(const float m) { mass = m; }
+    void set_mass(const float m) { assert(m >= 0); mass = m; }
 
     std::vector<float> get_pos() const { return pos; }  // returns copy of vec
     void set_pos(const float, const float, const float);
