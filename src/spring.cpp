@@ -21,13 +21,14 @@ Spring::Spring(const float _k,
                const Mass* _m1, 
                const Mass* _m2) {
 
-    assert(_k > 0);
+    assert(_k >= 0);
     k = _k;
 
     assert(_l0 >= 0);
     l0 = _l0;
     
     m1 = _m1;
+    assert(_m2 != m1 );
     m2 = _m2;
 }
 
@@ -65,8 +66,9 @@ std::ostream& operator<<(std::ostream& os, const Spring& s) {
 bool operator==(const Spring& lhs, const Spring& rhs) {
     return ( lhs.get_k()  == rhs.get_k()  &&
              lhs.get_l0() == rhs.get_l0() &&
-             lhs.get_m1() == rhs.get_m1() &&
-             lhs.get_m2() == rhs.get_m2()   );
+             ( (lhs.get_m1() == rhs.get_m1() && lhs.get_m2() == rhs.get_m2()) ||
+               (lhs.get_m1() == rhs.get_m2() && lhs.get_m2() == rhs.get_m1()) )
+           );
 }
 
 // overloaded inequality operator

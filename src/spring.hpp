@@ -41,10 +41,10 @@ public:
     void set_l0(const float _l0) { l0 = _l0; }
 
     const Mass* get_m1() const { return m1; }
-    void set_m1(const Mass* _m1) { m1 = _m1; }
+    void set_m1(const Mass* _m1) { assert(_m1 != m2); m1 = _m1; }
 
     const Mass* get_m2() const { return m2; }
-    void set_m2(const Mass* _m2) { m2 = _m2; }
+    void set_m2(const Mass* _m2) { assert(_m2 != m1); m2 = _m2; }
 
 private:
 

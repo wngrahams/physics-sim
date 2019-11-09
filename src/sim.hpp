@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "mass.hpp"
+#include "spring.hpp"
 
 #define X 0
 #define Y 1

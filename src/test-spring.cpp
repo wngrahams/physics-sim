@@ -1,7 +1,7 @@
 /*
- * sim.cpp
+ * test-spring.cpp
  *
- * main driver function for the project
+ * program to test String class implementation
  */
 
 #include "sim.hpp"
@@ -24,6 +24,28 @@ int main() {
     std::cout << "(" << m1_acc[X] << ", " << m1_acc[Y] << ", ";
     std::cout << m1_acc[Z] << ")\n";
 
+    Spring *s0 = new Spring();
+    s0->set_k(2.4f);
+    s0->set_l0(1.1f);
+    s0->set_m1(m0);
+    s0->set_m2(m1);
+    std::cout << *s0 << std::endl;
+
+    Spring *s1 = new Spring();
+    s1->set_k(2.4f);
+    s1->set_l0(1.1f);
+    s1->set_m1(m1);
+    s1->set_m2(m0);
+    std::cout << *s1 << std::endl;
+
+    assert(*s0 == *s1);
+
+    s1->set_m1(m2);
+    std::cout << *s1 << std::endl;
+
+
+    delete s0;
+    delete s1;
     delete m0;
     delete m1;
     delete m2;
