@@ -10,7 +10,7 @@ LDFLAGS = -g
 LDLIBS  =
 
 executables = sim test-mass test-spring
-objects = mass.o sim.o test-mass.o test-spring.o
+objects = mass.o spring.o sim.o test-mass.o test-spring.o
 
 .PHONY: default
 default: $(executables)
