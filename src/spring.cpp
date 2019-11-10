@@ -75,4 +75,3 @@ bool operator==(const Spring& lhs, const Spring& rhs) {
 bool operator!=(const Spring& lhs, const Spring& rhs) {
     return !(lhs == rhs);
 }
-

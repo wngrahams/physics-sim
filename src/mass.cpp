@@ -107,4 +107,3 @@ void Mass::shrink_vectors() {
     vel.shrink_to_fit();
     acc.shrink_to_fit();
 }
-

@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 project(physics-sim)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(physics-sim main.cpp)
+add_subdirectory(src)
