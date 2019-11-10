@@ -16,8 +16,8 @@ int main() {
         return 1;
     } 
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -45,20 +45,20 @@ int main() {
 
     /* OTHER STUFF GOES HERE NEXT */
   
-    float points[] = {
+    GLfloat points[] = {
         0.0f,  0.5f,  0.0f,
         0.5f, -0.5f,  0.0f,
         -0.5f, -0.5f,  0.0f
     };
 
 	// load points into GPU using Vertex Buffer Object (VBO)
-	GLuint vbo = 0;
+	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), points, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(GLfloat), points, GL_STATIC_DRAW);
 
 	// Generate a Vertex Array Object for our triangle
-	GLuint vao = 0;
+	GLuint vao;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(0);
