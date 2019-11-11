@@ -13,6 +13,7 @@
 
 #include "mass.hpp"
 #include "spring.hpp"
+#include "cube.hpp"
 
 #define X 0
 #define Y 1

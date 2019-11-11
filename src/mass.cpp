@@ -9,10 +9,10 @@
 // default constructor:
 Mass::Mass() {
 
-    mass = 0.0f;
-    pos = {0.0f, 0.0f, 0.0f};
-    vel = {0.0f, 0.0f, 0.0f};
-    acc = {0.0f, 0.0f, 0.0f};
+    mass = 0.0;
+    pos = {0.0, 0.0, 0.0};
+    vel = {0.0, 0.0, 0.0};
+    acc = {0.0, 0.0, 0.0};
 
     shrink_vectors();
 }
