@@ -45,7 +45,7 @@ int main() {
 
     /* OTHER STUFF GOES HERE NEXT */
   
-    float points[] = {
+    double points[] = {
         0.0f,  0.5f,  0.0f,
         0.5f, -0.5f,  0.0f,
         -0.5f, -0.5f,  0.0f
@@ -55,7 +55,7 @@ int main() {
 	GLuint vbo = 0;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(float), points, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(double), points, GL_STATIC_DRAW);
 
 	// Generate a Vertex Array Object for our triangle
 	GLuint vao = 0;
@@ -63,7 +63,7 @@ int main() {
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, NULL);
 
     // vertex shader: describes where the 3d points should end up on the display
     const char* vertex_shader =

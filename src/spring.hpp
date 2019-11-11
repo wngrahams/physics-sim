@@ -10,7 +10,7 @@
 #ifndef __SPRING_H__
 #define __SPRING_H__
 
-#include <assert.h>
+#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -22,7 +22,7 @@ public:
     
     Spring();  // default constructor
     // constructor with parameters:
-    Spring(const float, const float, const Mass*, const Mass*);
+    Spring(const double, const double, const Mass*, const Mass*);
     ~Spring() { m1 = NULL; m2 = NULL; }  // destructor
     Spring(const Spring&);  // copy constructor
     Spring& operator=(const Spring&);  // overloaded assignment operator
@@ -35,11 +35,11 @@ public:
     friend std::ostream& operator<<(std::ostream&, const Spring&);
 
     // getter/setter functions:
-    float get_k() const { return k; }
-    void set_k(const float _k) { k = _k; }
+    double get_k() const { return k; }
+    void set_k(const double _k) { k = _k; }
 
-    float get_l0() const { return l0; }
-    void set_l0(const float _l0) { l0 = _l0; }
+    double get_l0() const { return l0; }
+    void set_l0(const double _l0) { l0 = _l0; }
 
     const Mass* get_m1() const { return m1; }
     void set_m1(const Mass* _m1) { assert(_m1 != m2); m1 = _m1; }
@@ -49,8 +49,8 @@ public:
 
 private:
 
-    float k;  // spring constant in (N/m)
-    float l0;  // rest length in (m)
+    double k;  // spring constant in (N/m)
+    double l0;  // rest length in (m)
     const Mass *m1;  // pointer to Mass object that spring is connected to
     const Mass *m2;  // pointer to Mass object that spring is connected to
 

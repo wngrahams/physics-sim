@@ -9,15 +9,15 @@
 // default constructor:
 Spring::Spring() {
 
-    k = 1.0f;
-    l0 = 1.0f;
-    m1 = NULL;
-    m2 = NULL;
+    k = 1.0;
+    l0 = 1.0;
+    m1 = nullptr;
+    m2 = nullptr;
 }
 
 // constructor with parameters:
-Spring::Spring(const float _k, 
-               const float _l0, 
+Spring::Spring(const double _k, 
+               const double _l0, 
                const Mass* _m1, 
                const Mass* _m2) {
 

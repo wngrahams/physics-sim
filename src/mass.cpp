@@ -18,9 +18,9 @@ Mass::Mass() {
 }
 
 // constructor with parameters:
-Mass::Mass(float m, std::vector<float> p, 
-                    std::vector<float> v, 
-                    std::vector<float> a) {
+Mass::Mass(double m, std::vector<double> p, 
+                    std::vector<double> v, 
+                    std::vector<double> a) {
     
     assert(m >= 0);
     mass = m;
@@ -80,22 +80,22 @@ bool operator!=(const Mass& lhs, const Mass& rhs) {
     return !(lhs == rhs);
 }
 
-// set position with 3 floats:
-void Mass::set_pos(float x, float y, float z) {
+// set position with 3 doubles:
+void Mass::set_pos(double x, double y, double z) {
     pos[0] = x;
     pos[1] = y;
     pos[2] = z;
 }
 
-// set velocity with 3 floats:
-void Mass::set_vel(float x, float y, float z) {
+// set velocity with 3 doubles:
+void Mass::set_vel(double x, double y, double z) {
     vel[0] = x;
     vel[1] = y;
     vel[2] = z;
 }
 
-// set acceleration with 3 floats:
-void Mass::set_acc(float x, float y, float z) {
+// set acceleration with 3 doubles:
+void Mass::set_acc(double x, double y, double z) {
     acc[0] = x;
     acc[1] = y;
     acc[2] = z;

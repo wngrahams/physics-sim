@@ -18,6 +18,6 @@
 #define Y 1
 #define Z 2
 
-#define A_GRAV 9.80665  // acceleration due to gravity
+#define A_GRAV 9.80665  // acceleration due to gravity, positive is downward
 
 #endif
