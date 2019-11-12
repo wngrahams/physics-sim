@@ -77,6 +77,7 @@ bool start_gl() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // fullscreen:
+    /*
     GLFWmonitor* mon = glfwGetPrimaryMonitor();
     const GLFWvidmode* vmode = glfwGetVideoMode(mon);
     g_window = glfwCreateWindow (vmode->width,
@@ -84,6 +85,17 @@ bool start_gl() {
                                  "physics-sim",
                                  mon,
                                  NULL);
+    */
+
+    // windowed:
+    /**/
+    g_window = glfwCreateWindow(g_gl_width, 
+                                g_gl_height, 
+                                "physics-sim", 
+                                NULL, 
+                                NULL);
+    /**/
+
     if(!g_window) {
         fprintf(stderr, "ERROR: cound not open window with GLFW3\n");
         glfwTerminate();
@@ -133,13 +145,14 @@ void update_fps_counter(GLFWwindow* window) {
     double current_seconds = glfwGetTime();
     double elapsed_seconds = current_seconds - previous_seconds;
 
-    if (elapsed_seconds > 0.1) {
+    if (elapsed_seconds > 0.3) {
         double fps;
         char tmp[64];
 
         previous_seconds = current_seconds;
         fps = ((double)frame_count)/elapsed_seconds;
-        sprintf(tmp, "fps: %.1f", fps);
+        sprintf(tmp, "physics-sim @ fps: %.1f", fps);
+        glfwSetWindowTitle(window, tmp);
         frame_count = 0;
     }
     frame_count++;
