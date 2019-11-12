@@ -19,30 +19,36 @@ int main() {
 //        cout << mass[i].p[2] << "\t\n";
 //    }
 
+    cout << T << "\n";
     cout << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
     cout << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
-    cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n\n";
+    cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n";
+
 
 
     // simulation loop
     for (int iteration = 0; iteration < NUM_OF_ITERATIONS; iteration++) {
-        // calculate force on each spring
+        // initialize force vector
         vector<vector<double>> force;
         for (int i = 0; i < NUM_OF_MASSES; i++) {
             force.emplace_back();
             force[i] = {0,0,0};
         }
+        // calculate force on each spring
         calculate_force(mass, spring, force);
         add_external_force(mass, spring, force);
         add_ground_force(mass, spring, force);
 
-
+        // update position of cube
         update_position(mass, spring, force);
 
-        cout << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
-        cout << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
-        cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n\n";
+        cout << "T: " << T << "\n";
+        cout << "p: " << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
+        cout << "v: " << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
+        cout << "a: " << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n";
+        cout << "f: " << force[0][0] << ", " << force[0][1] << ", " << force[0][2] << "\n\n";
 
+        // update time
         T += DT;
     }
 
@@ -108,7 +114,6 @@ double dist(vector<double> a, vector<double> b) {
 }
 
 void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
-
     // force due to spring
     for (int i = 0; i < NUM_OF_SPRINGS; i++) {
         // calculate force vector for spring
@@ -119,17 +124,17 @@ void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
                                       forceNormalized * (mass[spring[i].m2].p[2] - mass[spring[i].m1].p[2]) / length};
 
         // now update force vector for masses that spring touches
-        force[spring[i].m1][0] -= forceVector[0];
-        force[spring[i].m1][1] -= forceVector[1];
-        force[spring[i].m1][2] -= forceVector[2];
-        force[spring[i].m2][0] += forceVector[0];
-        force[spring[i].m2][1] += forceVector[1];
-        force[spring[i].m2][2] += forceVector[2];
+        force[spring[i].m1][0] += forceVector[0];
+        force[spring[i].m1][1] += forceVector[1];
+        force[spring[i].m1][2] += forceVector[2];
+        force[spring[i].m2][0] -= forceVector[0];
+        force[spring[i].m2][1] -= forceVector[1];
+        force[spring[i].m2][2] -= forceVector[2];
     }
 
     // force due to gravity
     for (int i = 0; i < NUM_OF_MASSES; i++) {
-        force[i][2] += G; // note: gravity constant negative
+        force[i][2] += mass[i].m * G; // note: gravity constant is negative
     }
 }
 
@@ -138,22 +143,20 @@ void add_external_force(vector<Mass> &mass, vector<Spring> &spring, vector<vecto
 }
 
 void add_ground_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
-
     for (int i = 0; i < NUM_OF_MASSES; i++) {
         // if "under" ground, then apply restorative force
         if (mass[i].p[2] < 0) {
-            force[i][2] += K_GROUND * mass[i].p[2];
+            force[i][2] += K_GROUND * abs(mass[i].p[2]);
         }
     }
 }
 
 void update_position(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
-
     for (int i = 0; i < NUM_OF_MASSES; i++) {
         // acceleration, velocity, position calculation
         for (int j = 0; j < DIMENSIONS; j++) {
             mass[i].a[j] = force[i][j] / mass[i].m;
-            mass[i].v[j] += mass[i].a[j] * DT;
+            mass[i].v[j] += mass[i].a[j] * DT * V_DAMP_CONST; // velocity dampening
             mass[i].p[j] += mass[i].v[j] * DT;
         }
     }
