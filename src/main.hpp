@@ -20,7 +20,7 @@ using namespace std;
 #define DT 0.001
 #define V_DAMP_CONST 0.999
 
-#define NUM_OF_ITERATIONS 2000
+#define NUM_OF_ITERATIONS 500
 
 struct Mass {
     double m; // mass in kg

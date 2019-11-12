@@ -1,5 +1,6 @@
 #include <iostream>
 #include <functional>
+#include <limits>
 #include "main.hpp"
 
 using namespace std;
@@ -32,7 +33,7 @@ int main() {
         vector<vector<double>> force;
         for (int i = 0; i < NUM_OF_MASSES; i++) {
             force.emplace_back();
-            force[i] = {0,0,0};
+            force[i] = {0.0, 0.0, 0.0};
         }
         // calculate force on each spring
         calculate_force(mass, spring, force);
@@ -58,24 +59,24 @@ int main() {
 void initialize_cube(vector<Mass> &mass, vector<Spring> &spring) {
     // create masses
     Mass temp_mass = {WEIGHT_PER_MASS,
-                 {0, 0, 0},
-                 {0, 0, 0},
-                 {0, 0, 0}};
-    temp_mass.p = {0, 0, INITIAL_HEIGHT}; // 0
+                 {0.0, 0.0, 0.0},
+                 {0.0, 0.0, 0.0},
+                 {0.0, 0.0, 0.0}};
+    temp_mass.p = {0.0, 0.0, INITIAL_HEIGHT}; // 0
     mass.emplace_back(temp_mass);
-    temp_mass.p = {L0_SIDE, 0, INITIAL_HEIGHT}; // 1
+    temp_mass.p = {L0_SIDE, 0.0, INITIAL_HEIGHT}; // 1
     mass.emplace_back(temp_mass);
     temp_mass.p = {L0_SIDE, L0_SIDE, INITIAL_HEIGHT}; // 2
     mass.emplace_back(temp_mass);
-    temp_mass.p = {0, L0_SIDE, INITIAL_HEIGHT}; // 3
+    temp_mass.p = {0.0, L0_SIDE, INITIAL_HEIGHT}; // 3
     mass.emplace_back(temp_mass);
-    temp_mass.p = {0, 0, INITIAL_HEIGHT + L0_SIDE}; // 4
+    temp_mass.p = {0.0, 0.0, INITIAL_HEIGHT + L0_SIDE}; // 4
     mass.emplace_back(temp_mass);
-    temp_mass.p = {L0_SIDE, 0, INITIAL_HEIGHT + L0_SIDE}; // 5
+    temp_mass.p = {L0_SIDE, 0.0, INITIAL_HEIGHT + L0_SIDE}; // 5
     mass.emplace_back(temp_mass);
     temp_mass.p = {L0_SIDE, L0_SIDE, INITIAL_HEIGHT + L0_SIDE}; // 6
     mass.emplace_back(temp_mass);
-    temp_mass.p = {0, L0_SIDE, INITIAL_HEIGHT + L0_SIDE}; // 7
+    temp_mass.p = {0.0, L0_SIDE, INITIAL_HEIGHT + L0_SIDE}; // 7
     mass.emplace_back(temp_mass);
 
     spring.emplace_back(Spring {K_SPRING, dist(mass[0].p, mass[1].p), 0, 1});
@@ -110,7 +111,7 @@ void initialize_cube(vector<Mass> &mass, vector<Spring> &spring) {
 }
 
 double dist(vector<double> a, vector<double> b) {
-    return sqrt(pow(b[0]-a[0],2) + pow(b[1]-a[1],2) + pow(b[2]-a[2],2));
+    return sqrt(pow(b[0]-a[0],2.0) + pow(b[1]-a[1],2.0) + pow(b[2]-a[2],2.0));
 }
 
 void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
@@ -119,6 +120,12 @@ void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
         // calculate force vector for spring
         double length = dist(mass[spring[i].m1].p, mass[spring[i].m2].p);
         double forceNormalized = K_SPRING * (length - spring[i].l0);
+        // not sure why, but even when there is no horizontal motion,
+        // length becomes != spring[i].l0 at some seemingly random point
+        if (forceNormalized < 0.0000001) {
+            forceNormalized = 0;
+        }
+
         vector<double> forceVector = {forceNormalized * (mass[spring[i].m2].p[0] - mass[spring[i].m1].p[0]) / length,
                                       forceNormalized * (mass[spring[i].m2].p[1] - mass[spring[i].m1].p[1]) / length,
                                       forceNormalized * (mass[spring[i].m2].p[2] - mass[spring[i].m1].p[2]) / length};
@@ -156,7 +163,8 @@ void update_position(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
         // acceleration, velocity, position calculation
         for (int j = 0; j < DIMENSIONS; j++) {
             mass[i].a[j] = force[i][j] / mass[i].m;
-            mass[i].v[j] += mass[i].a[j] * DT * V_DAMP_CONST; // velocity dampening
+            mass[i].v[j] += mass[i].a[j] * DT;
+            mass[i].v[j] = mass[i].v[j] * V_DAMP_CONST; // velocity dampening
             mass[i].p[j] += mass[i].v[j] * DT;
         }
     }
