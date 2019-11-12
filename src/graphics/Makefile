@@ -1,5 +1,5 @@
 CC  = clang -O0
-CXX = g++ -O0 
+CXX = clang++ -O0 
 
 INCLUDES = -I/usr/local/include
 
@@ -10,14 +10,14 @@ LDFLAGS = -g -framework Cocoa -framework OpenGL -framework IOKit -L/usr/local/li
 LDLIBS  = -lGLEW -lglfw
 
 executables = graphics
-objects = gl-utils.o graphics.o
+objects = gl-utils.o graphics.o maths_funcs.o
 
 .PHONY: default
 default: $(executables)
 
-$(executables): gl-utils.o
+$(executables): gl-utils.o maths_funcs.o
 
-$(objects): gl-utils.h
+$(objects): gl-utils.h maths_funcs.hpp
 
 .PHONY: clean
 clean:

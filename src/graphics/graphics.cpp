@@ -8,10 +8,12 @@
  * basis of this code.
  */
 
+#include <math.h>
 #include <stdlib.h>
 
 #include "gl-utils.h"
 #include "graphics.h"
+#include "maths_funcs.hpp"
 
 #define FILE_SIZE_VSHADER (1024*256)
 #define FILE_SIZE_FSHADER (1024*256)
@@ -129,6 +131,15 @@ int main(int argv, char** argc) {
     }
     // END TODO
 
+    GLfloat matrix[] = {
+		1.0f, 0.0f, 0.0f, 0.0f, // first column
+		0.0f, 1.0f, 0.0f, 0.0f, // second column
+		0.0f, 0.0f, 1.0f, 0.0f, // third column
+		0.5f, 0.0f, 0.0f, 1.0f	// fourth column
+	};
+
+    int matrix_location = glGetUniformLocation(shader_program, "matrix");
+
     //TODO comment this out
     print_all_shader_info(shader_program);
 
@@ -141,6 +152,7 @@ int main(int argv, char** argc) {
 
     // switch to the shader program:
     glUseProgram(shader_program);
+    glUniformMatrix4fv(matrix_location, 1, GL_FALSE, matrix);
 
     // assign initial color to fragment shader:
     //glUniform4f(color_loc, 0.6f, 0.0f, 0.6f, 1.0f);
@@ -152,8 +164,17 @@ int main(int argv, char** argc) {
 	glCullFace(GL_BACK);	   // cull back face
 	glFrontFace(GL_CW);      // GL_CCW for counter clock-wise
 
+    float speed = 10.0f;
+    float last_position = 0.0f;
     // continually draw until window is closed 
     while (!glfwWindowShouldClose(g_window)) {
+
+        // timer for doing animation:
+        double previous_seconds = glfwGetTime();
+        double current_seconds = glfwGetTime();
+        double elapsed_seconds = current_seconds - previous_seconds;
+        previous_seconds = current_seconds;
+
         // update fps counter:
         update_fps_counter(g_window);
 
@@ -165,6 +186,17 @@ int main(int argv, char** argc) {
 
         // set shader program:
         glUseProgram(shader_program);
+
+        // update the matrix
+		// - you could simplify this by just using sin(current_seconds)
+		matrix[12] = elapsed_seconds * speed + last_position;
+		last_position = matrix[12];
+		if ( fabs( last_position ) > 1.0 ) {
+			speed = -speed;
+		}
+		//
+		// Note: this call is related to the most recently 'used' shader programme
+		glUniformMatrix4fv( matrix_location, 1, GL_FALSE, matrix );
 
         // bind VAO:
         glBindVertexArray(vao);
