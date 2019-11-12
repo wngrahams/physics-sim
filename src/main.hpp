@@ -5,17 +5,21 @@ using namespace std;
 #include <vector>
 #include <cmath>
 
+// cube variables
 #define WEIGHT_PER_MASS 0.1
 #define L0_SIDE 0.1
-#define L0_DIAGONAL sqrt(pow(L0_SIDE, 2) * 2)
-#define L0_DIAGONAL_INTERNAL sqrt(pow(L0_DIAGONAL, 2) + pow(L0_SIDE, 2))
-#define G -9.80665
 #define K_SPRING 10000
-#define K_GROUND 100000
 #define INITIAL_HEIGHT 5
 #define NUM_OF_MASSES 8
 #define NUM_OF_SPRINGS 28
-#define NUM_OF_ITERATIONS 1
+#define DIMENSIONS 3
+
+// world variables
+#define G -9.80665
+#define K_GROUND 100000
+#define DT 0.001
+
+#define NUM_OF_ITERATIONS 1000
 
 struct Mass {
     double m; // mass in kg
@@ -41,6 +45,9 @@ void calculate_force(vector<Mass> &, vector<Spring> &, vector<vector<double>> &)
 void add_external_force(vector<Mass> &, vector<Spring> &, vector<vector<double>> &);
 // add force due to ground
 void add_ground_force(vector<Mass> &, vector<Spring> &, vector<vector<double>> &);
+// update position of masses due to force
+void update_position(vector<Mass> &, vector<Spring> &, vector<vector<double>> &);
+
 
 
 #endif //PHYSICS_SIM_MAIN_HPP

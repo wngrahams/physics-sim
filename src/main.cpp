@@ -1,9 +1,13 @@
 #include <iostream>
+#include <functional>
 #include "main.hpp"
 
 using namespace std;
 
+
 int main() {
+
+    double T = 0.0;
 
     vector<Mass> mass;
     vector<Spring> spring;
@@ -14,6 +18,11 @@ int main() {
 //        cout << mass[i].p[1] << "\t";
 //        cout << mass[i].p[2] << "\t\n";
 //    }
+
+    cout << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
+    cout << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
+    cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n\n";
+
 
     // simulation loop
     for (int iteration = 0; iteration < NUM_OF_ITERATIONS; iteration++) {
@@ -27,10 +36,14 @@ int main() {
         add_external_force(mass, spring, force);
         add_ground_force(mass, spring, force);
 
-        for (int i = 0 ; i < NUM_OF_MASSES; i++) {
-            cout << force[i][0] << ", " << force[i][1] << ", " << force[i][2] << "\n";
-        }
 
+        update_position(mass, spring, force);
+
+        cout << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
+        cout << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
+        cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n\n";
+
+        T += DT;
     }
 
 
@@ -106,12 +119,12 @@ void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
                                       forceNormalized * (mass[spring[i].m2].p[2] - mass[spring[i].m1].p[2]) / length};
 
         // now update force vector for masses that spring touches
-        force[spring[i].m1][0] += forceVector[0];
-        force[spring[i].m1][1] += forceVector[1];
-        force[spring[i].m1][2] += forceVector[2];
-        force[spring[i].m2][0] -= forceVector[0];
-        force[spring[i].m2][1] -= forceVector[1];
-        force[spring[i].m2][2] -= forceVector[2];
+        force[spring[i].m1][0] -= forceVector[0];
+        force[spring[i].m1][1] -= forceVector[1];
+        force[spring[i].m1][2] -= forceVector[2];
+        force[spring[i].m2][0] += forceVector[0];
+        force[spring[i].m2][1] += forceVector[1];
+        force[spring[i].m2][2] += forceVector[2];
     }
 
     // force due to gravity
@@ -126,9 +139,22 @@ void add_external_force(vector<Mass> &mass, vector<Spring> &spring, vector<vecto
 
 void add_ground_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
 
+    for (int i = 0; i < NUM_OF_MASSES; i++) {
+        // if "under" ground, then apply restorative force
+        if (mass[i].p[2] < 0) {
+            force[i][2] += K_GROUND * mass[i].p[2];
+        }
+    }
+}
 
+void update_position(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
 
-
-
-
+    for (int i = 0; i < NUM_OF_MASSES; i++) {
+        // acceleration, velocity, position calculation
+        for (int j = 0; j < DIMENSIONS; j++) {
+            mass[i].a[j] = force[i][j] / mass[i].m;
+            mass[i].v[j] += mass[i].a[j] * DT;
+            mass[i].p[j] += mass[i].v[j] * DT;
+        }
+    }
 }
