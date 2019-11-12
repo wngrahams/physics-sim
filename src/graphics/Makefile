@@ -9,15 +9,15 @@ CXXFLAGS = -g -Wall -std=c++11 $(INCLUDES)
 LDFLAGS = -g -framework Cocoa -framework OpenGL -framework IOKit -L/usr/local/lib 
 LDLIBS  = -lGLEW -lglfw
 
-executables = test3
-objects = gl_utils.o test3.o
+executables = graphics
+objects = gl-utils.o graphics.o
 
 .PHONY: default
 default: $(executables)
 
-$(executables): gl_utils.o
+$(executables): gl-utils.o
 
-$(objects): gl_utils.h
+$(objects): gl-utils.h
 
 .PHONY: clean
 clean:
