@@ -20,6 +20,7 @@
 
 #define MESH_FILE "sphere.obj"
 #define NUM_SPHERES 4
+#define NUM_PLANES 2
 
 #define CLIPPING_NEAR     (0.1f)
 #define CLIPPING_FAR      (1000.0f)
@@ -28,6 +29,9 @@
 #define CAM_HEADING_SPEED (80000.0f)  // 100 = 30 degrees per second
 #define CAM_START_POS     0.0f, 0.0f, 5.0f
 
+#define DIR_FD 0.0f, 0.0f, -1.0f, 0.0f
+#define DIR_RT 1.0f, 0.0f, 0.0f, 0.0f 
+#define DIR_UP 0.0f, 1.0f, 0.0f, 0.0f
 
 /* create a unit quaternion q from an angle in degrees a, and an axis x,y,z */
 void create_versor( float *q, float degrees, float x, float y, float z ) {
@@ -97,8 +101,8 @@ int main(int argv, char** argc) {
 
     GLuint points_vbo;
     GLuint vao;
-	GLuint vs, fs, shader_program;
-    GLuint* shaders;
+	GLuint vs, fs, shader_program, fs_black, shader_program_black;
+    GLuint *shaders, *shaders_black, *programs;
 	
     int model_mat_location, view_mat_location, proj_mat_location;
 
@@ -108,9 +112,9 @@ int main(int argv, char** argc) {
     float quaternion[4];
 
     // keep track of some useful vectors that can be used for keyboard movement
-	vec4 fwd( 0.0f, 0.0f, -1.0f, 0.0f );
-	vec4 rgt( 1.0f, 0.0f, 0.0f, 0.0f );
-	vec4 up( 0.0f, 1.0f, 0.0f, 0.0f );
+	vec4 fd(DIR_FD);
+	vec4 rt(DIR_RT);
+	vec4 up(DIR_UP);
 
     // camera matricies:
     mat4 view_mat, proj_mat, T, R;
@@ -120,14 +124,15 @@ int main(int argv, char** argc) {
                               vec3( 2.0, 0.0, 0.0 ),
 							  vec3( -2.0, 0.0, -2.0 ), 
                               vec3( 1.5, 1.0, -1.0 ) };
+    // world position for each plane
+    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0) };
     
     // Create geometry (from file)
     GLfloat *vp = NULL;  // array of vertex points
 	GLfloat *vn = NULL;  // array of vertex normals
 	GLfloat *vt = NULL;  // array of texture coordinates
 	int point_count = 0;
-	load_obj_file(MESH_FILE, vp, vt, vn, point_count);
-
+	
     // restart log file:
     restart_gl_log();
 
@@ -137,6 +142,8 @@ int main(int argv, char** argc) {
     // only draw a pixel if the shape is closest to the viewer:
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
+    load_obj_file(MESH_FILE, vp, vt, vn, point_count);
 
     // generate vertex attribute object (vao):
     glGenVertexArrays(1, &vao);
@@ -150,18 +157,28 @@ int main(int argv, char** argc) {
                      *point_count*sizeof(GLfloat), 
                      vp,
 					 GL_STATIC_DRAW );
-		glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
-		glEnableVertexAttribArray( 0 );
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(0);
 	} 
 
     // get shaders from files, compile, and link:
     vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
+    fs_black = compile_shader("plane-black-fs.glsl", GL_FRAGMENT_SHADER);
     fs = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     shaders = new GLuint[2];
     shaders[0] = vs;
     shaders[1] = fs;
     shader_program = link_shaders(shaders, 2);
     assert(program_is_valid(shader_program));
+
+    shaders_black = new GLuint[2];
+    shaders_black[0] = vs;
+    shaders_black[1] = fs_black;
+    shader_program_black = link_shaders(shaders_black, 2);
+    assert(program_is_valid(shader_program_black));
+    programs = new GLuint[2];
+    programs[0] = shader_program;
+    programs[1] = shader_program_black;
 
     // get Uniform variable locations from shaders:
     model_mat_location = glGetUniformLocation(shader_program, "model");
@@ -171,7 +188,9 @@ int main(int argv, char** argc) {
     // free unneeded memory used when making shaders:
     glDeleteShader(vs);
     glDeleteShader(fs);
+    glDeleteShader(fs_black);
     delete shaders;  
+    delete shaders_black;
 
     /* --- CAMERA SETUP --- */
     aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
@@ -188,7 +207,8 @@ int main(int argv, char** argc) {
     quat_to_mat4(R.m, quaternion);
 
     // combine the inverse rotation and transformation to make a view matrix:
-	view_mat = R * T;
+	//view_mat = R * T;
+    view_mat = look_at(cam_pos, vec3(0.0f, 0.0f, 0.0f), up);
     /* --- END CAMERA SETUP -- */
 
     /* --- RENDER SETTINGS --- */
@@ -207,7 +227,7 @@ int main(int argv, char** argc) {
 	glEnable(GL_CULL_FACE);	  // enable face culling
 	glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
-	glClearColor(0.2, 0.2, 0.2, 1.0); // grey background
+	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
 	//glViewport(0, 0, g_gl_width, g_gl_height);
     /* --- END RENDER SETTINGS --- */
 
@@ -228,12 +248,13 @@ int main(int argv, char** argc) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // set shader program:
-        glUseProgram(shader_program);
+        //glUseProgram(shader_program);
 
         // draw each sphere
         for (int i=0; i<NUM_SPHERES; i++) {
+            glUseProgram(programs[0]);
 			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, model_mats[i].m);
-			glDrawArrays(GL_TRIANGLES, 0, point_count);
+			glDrawArrays(GL_LINE_LOOP, 0, point_count);
 		}
 
         // bind VAO:
@@ -285,9 +306,9 @@ int main(int argv, char** argc) {
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_RIGHT)) {
 			cam_yaw -= CAM_HEADING_SPEED * elapsed_seconds;
@@ -298,61 +319,61 @@ int main(int argv, char** argc) {
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_UP)) {
 			cam_pitch += CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
 			float q_pitch[4];
-			create_versor(q_pitch, cam_pitch, rgt.v[0], rgt.v[1], rgt.v[2]);
+			create_versor(q_pitch, cam_pitch, rt.v[0], rt.v[1], rt.v[2]);
 			mult_quat_quat(quaternion, q_pitch, quaternion);
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		if (glfwGetKey( g_window, GLFW_KEY_DOWN)) {
 			cam_pitch -= CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
 			float q_pitch[4];
-			create_versor(q_pitch, cam_pitch, rgt.v[0], rgt.v[1], rgt.v[2]);
+			create_versor(q_pitch, cam_pitch, rt.v[0], rt.v[1], rt.v[2]);
 			mult_quat_quat(quaternion, q_pitch, quaternion);
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		if ( glfwGetKey(g_window, GLFW_KEY_Z) ) {
 			cam_roll -= CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
 			float q_roll[4];
-			create_versor(q_roll, cam_roll, fwd.v[0], fwd.v[1], fwd.v[2]);
+			create_versor(q_roll, cam_roll, fd.v[0], fd.v[1], fd.v[2]);
 			mult_quat_quat(quaternion, q_roll, quaternion);
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		if ( glfwGetKey(g_window, GLFW_KEY_C) ) {
 			cam_roll += CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
 			float q_roll[4];
-			create_versor(q_roll, cam_roll, fwd.v[0], fwd.v[1], fwd.v[2]);
+			create_versor(q_roll, cam_roll, fd.v[0], fd.v[1], fd.v[2]);
 			mult_quat_quat(quaternion, q_roll, quaternion);
 
 			// recalc axes to suit new orientation
 			quat_to_mat4(R.m, quaternion);
-			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
-			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
-			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+			fd = R * vec4(DIR_FD);
+			rt = R * vec4(DIR_RT);
+			up = R * vec4(DIR_UP);
 		}
 		// update view matrix
 		if (cam_moved) {
@@ -363,9 +384,9 @@ int main(int argv, char** argc) {
 			//	printf ("dot rgt . up %f\n", dot (rgt, up));
 			//	printf ("dot fwd . rgt\n %f", dot (fwd, rgt));
 
-			cam_pos = cam_pos + vec3(fwd) * -move.v[2];
+			cam_pos = cam_pos + vec3(fd) * -move.v[2];
 			cam_pos = cam_pos + vec3(up) * move.v[1];
-			cam_pos = cam_pos + vec3(rgt) * move.v[0];
+			cam_pos = cam_pos + vec3(rt) * move.v[0];
 			mat4 T = translate( identity_mat4(), vec3(cam_pos));
 
 			view_mat = inverse(R) * inverse(T);
