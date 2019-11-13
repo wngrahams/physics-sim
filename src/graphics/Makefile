@@ -17,7 +17,7 @@ default: $(executables)
 
 $(executables): gl-utils.o maths_funcs.o obj_parser.o
 
-$(objects): gl-utils.h maths_funcs.hpp obj_parser.h
+$(objects): gl-utils.h maths_funcs.hpp obj_parser.hpp
 
 .PHONY: clean
 clean:
