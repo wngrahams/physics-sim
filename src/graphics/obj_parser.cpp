@@ -14,7 +14,7 @@
 | Mesh MUST contain vertex points, normals, and texture coordinates            |
 | Faces MUST come after all other data in the .obj file                        |
 \******************************************************************************/
-#include "obj_parser.h"
+#include "obj_parser.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

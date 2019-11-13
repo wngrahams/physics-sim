@@ -16,41 +16,117 @@
 #include "gl-utils.h"
 #include "graphics.h"
 #include "maths_funcs.hpp"
+#include "obj_parser.hpp"
 
-#define FILE_SIZE_VSHADER (1024 * 256)
-#define FILE_SIZE_FSHADER (1024 * 256)
+#define MESH_FILE "sphere.obj"
+#define NUM_SPHERES 4
 
-#define CLIPPING_NEAR (0.1f)
-#define CLIPPING_FAR  (100.0f)
-#define FOV           (67.0f * ONE_DEG_IN_RAD)
-#define CAM_SPEED     (2000.0f)   // 2000 units per second
-#define CAM_YAW_SPEED (200000.0f)  // 200000 degrees per second
+#define CLIPPING_NEAR     (0.1f)
+#define CLIPPING_FAR      (1000.0f)
+#define FOV_Y             (67.0f)
+#define CAM_SPEED         (10000.0f)    // 5 = 1 unit per second
+#define CAM_HEADING_SPEED (80000.0f)  // 100 = 30 degrees per second
+#define CAM_START_POS     0.0f, 0.0f, 5.0f
 
+
+/* create a unit quaternion q from an angle in degrees a, and an axis x,y,z */
+void create_versor( float *q, float degrees, float x, float y, float z ) {
+	float rad = ONE_DEG_IN_RAD * degrees;
+	q[0] = cosf( rad / 2.0f );
+	q[1] = sinf( rad / 2.0f ) * x;
+	q[2] = sinf( rad / 2.0f ) * y;
+	q[3] = sinf( rad / 2.0f ) * z;
+}
+
+/* convert a unit quaternion q to a 4x4 matrix m */
+void quat_to_mat4( float *m, const float *q ) {
+	float w = q[0];
+	float x = q[1];
+	float y = q[2];
+	float z = q[3];
+	m[0] = 1.0f - 2.0f * y * y - 2.0f * z * z;
+	m[1] = 2.0f * x * y + 2.0f * w * z;
+	m[2] = 2.0f * x * z - 2.0f * w * y;
+	m[3] = 0.0f;
+	m[4] = 2.0f * x * y - 2.0f * w * z;
+	m[5] = 1.0f - 2.0f * x * x - 2.0f * z * z;
+	m[6] = 2.0f * y * z + 2.0f * w * x;
+	m[7] = 0.0f;
+	m[8] = 2.0f * x * z + 2.0f * w * y;
+	m[9] = 2.0f * y * z - 2.0f * w * x;
+	m[10] = 1.0f - 2.0f * x * x - 2.0f * y * y;
+	m[11] = 0.0f;
+	m[12] = 0.0f;
+	m[13] = 0.0f;
+	m[14] = 0.0f;
+	m[15] = 1.0f;
+}
+
+/* normalise a quaternion in case it got a bit mangled */
+void normalise_quat( float *q ) {
+	// norm(q) = q / magnitude (q)
+	// magnitude (q) = sqrt (w*w + x*x...)
+	// only compute sqrt if interior sum != 1.0
+	float sum = q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3];
+	// NB: floats have min 6 digits of precision
+	const float thresh = 0.0001f;
+	if ( fabs( 1.0f - sum ) < thresh ) {
+		return;
+	}
+	float mag = sqrt( sum );
+	for ( int i = 0; i < 4; i++ ) {
+		q[i] = q[i] / mag;
+	}
+}
+
+/* multiply quaternions to get another one. result=R*S */
+/* will need to normalize after */
+void mult_quat_quat( float *result, const float *r, const float *s ) {
+	float w = s[0] * r[0] - s[1] * r[1] - s[2] * r[2] - s[3] * r[3];
+	float x = s[0] * r[1] + s[1] * r[0] - s[2] * r[3] + s[3] * r[2];
+	float y = s[0] * r[2] + s[1] * r[3] + s[2] * r[0] - s[3] * r[1];
+	float z = s[0] * r[3] - s[1] * r[2] + s[2] * r[1] + s[3] * r[0];
+	result[0] = w;
+	result[1] = x;
+	result[2] = y;
+    result[3] = z;
+    normalise_quat(result);
+}
 
 int main(int argv, char** argc) {
-    GLfloat points[] = {  0.0f,  0.5f,  0.0f, 
-                          0.5f, -0.5f,  0.0f, 
-                         -0.5f, -0.5f,  0.0f  };
 
-    GLfloat colors[] = {  1.0f, 0.0f, 0.0f, 
-                          0.0f, 1.0f, 0.0f, 
-                          0.0f, 0.0f, 1.0f };
-
-
-
-    int num_points = 3;
-
-    GLuint points_vbo, colors_vbo;
+    GLuint points_vbo;
     GLuint vao;
-	char fragment_shader[FILE_SIZE_FSHADER];
 	GLuint vs, fs, shader_program;
     GLuint* shaders;
-	int params = -1;
-	//GLint color_loc;
+	
+    int model_mat_location, view_mat_location, proj_mat_location;
 
     // camera vars:
-    float aspect, inverse_range, s_x, s_y, s_z, p_z, cam_yaw;
+    float aspect;
+    float cam_heading = 0.0f;
+    float quaternion[4];
+
+    // keep track of some useful vectors that can be used for keyboard movement
+	vec4 fwd( 0.0f, 0.0f, -1.0f, 0.0f );
+	vec4 rgt( 1.0f, 0.0f, 0.0f, 0.0f );
+	vec4 up( 0.0f, 1.0f, 0.0f, 0.0f );
+
+    // camera matricies:
+    mat4 view_mat, proj_mat, T, R;
+    vec3 cam_pos(CAM_START_POS);
+    // a world position for each sphere in the scene
+    vec3 sphere_pos_wor[] = { vec3( -2.0, 0.0, 0.0 ),
+                              vec3( 2.0, 0.0, 0.0 ),
+							  vec3( -2.0, 0.0, -2.0 ), 
+                              vec3( 1.5, 1.0, -1.0 ) };
     
+    // Create geometry (from file)
+    GLfloat *vp = NULL;  // array of vertex points
+	GLfloat *vn = NULL;  // array of vertex normals
+	GLfloat *vt = NULL;  // array of texture coordinates
+	int point_count = 0;
+	load_obj_file(MESH_FILE, vp, vt, vn, point_count);
 
     // restart log file:
     restart_gl_log();
@@ -62,171 +138,80 @@ int main(int argv, char** argc) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    // load points into GPU using Vertex Buffer Object (vbo):
-    glGenBuffers(1, &points_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glBufferData(GL_ARRAY_BUFFER, 
-                 3*num_points*sizeof(GLfloat), 
-                 points, 
-                 GL_STATIC_DRAW);
-
-    // make a second vbo for the colors
-    glGenBuffers(1, &colors_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 3*num_points*sizeof(GLfloat),
-                 colors,
-                 GL_STATIC_DRAW);
-
     // generate vertex attribute object (vao):
-    // we have two vertex shader input variables: 0 and 1, for points_vbo and
-    // colors_vbo respectively
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+	glBindVertexArray(vao);
 
-    // load shaders from files:
-    /*
-    parse_file_into_str("test_vs.glsl", vertex_shader, sizeof(vertex_shader));
-    parse_file_into_str("test_fs.glsl", 
-                        fragment_shader, 
-                        sizeof(fragment_shader));*/
+    // load points into GPU using Vertex Buffer Object (vbo):
+    if (NULL != vp) {
+		glGenBuffers(1 , &points_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+		glBufferData(GL_ARRAY_BUFFER, 3
+                     *point_count*sizeof(GLfloat), 
+                     vp,
+					 GL_STATIC_DRAW );
+		glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+		glEnableVertexAttribArray( 0 );
+	} 
 
-    // compile and link shader program from files:
+    // get shaders from files, compile, and link:
     vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
     fs = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     shaders = new GLuint[2];
     shaders[0] = vs;
     shaders[1] = fs;
     shader_program = link_shaders(shaders, 2);
-    delete shaders;  // this memory is no longer needed
-
-    /*
-    // TODO: move compile, link, and error checking for both to another function
-    // compile vertex shader:
-    vs = glCreateShader(GL_VERTEX_SHADER);
-    p = (const GLchar*)vertex_shader;
-    glShaderSource(vs, 1, &p, NULL);
-    glCompileShader(vs);
-
-    // check vertex shader for compile errors:
-    glGetShaderiv(vs, GL_COMPILE_STATUS, &params);
-    if (GL_TRUE != params) {
-        fprintf(stderr, "ERROR: GL shader with index %i did not compile\n", vs);
-        print_shader_info_log(vs);
-        return 1;
-    }
-
-    // compile fragment shader
-    fs = glCreateShader(GL_FRAGMENT_SHADER);
-    p = (const GLchar*)fragment_shader;
-    glShaderSource(fs, 1, &p, NULL);
-    glCompileShader(fs);
-
-    // check fragment shader for compile errors:
-    glGetShaderiv(fs, GL_COMPILE_STATUS, &params);
-    if (GL_TRUE != params) {
-        fprintf(stderr, "ERROR: GL shader with index %i did not compile\n", fs);
-        print_shader_info_log(fs);
-        return 1;
-    }
-
-    // link shaders
-    shader_program = glCreateProgram();
-    glAttachShader(shader_program, fs);
-    glAttachShader(shader_program, vs);
-    glLinkProgram(shader_program);
-
-    // check for shader linking errors:
-    glGetProgramiv(shader_program, GL_LINK_STATUS, &params);
-    if (GL_TRUE != params) {
-        fprintf(stderr, 
-                "ERROR: could not link shader program with GL index %i\n",
-                shader_program);
-        print_program_info_log(shader_program);
-        return 1;
-    }
-    // END TODO
-    */
-
-    GLfloat matrix[] = {
-		1.5f, 0.0f, 0.0f, 0.0f, // first column
-		0.0f, 1.5f, 0.0f, 0.0f, // second column
-		0.0f, 0.0f, 1.5f, 0.0f, // third column
-		0.0f, 0.0f, 0.0f, 1.0f	// fourth column
-	};
-
-    //int matrix_location = glGetUniformLocation(shader_program, "matrix");
-
-    /*--------------------------create camera
-	 * matrices----------------------------*/
-	/* create PROJECTION MATRIX */
-	// input variables
-	aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
-	// matrix components
-	inverse_range = 1.0f/ tan(FOV*0.5f);
-	s_x = inverse_range/aspect;
-	s_y = inverse_range;
-	s_z = -(CLIPPING_FAR + CLIPPING_NEAR)/(CLIPPING_FAR - CLIPPING_NEAR);
-	p_z = -(2.0f * CLIPPING_FAR * CLIPPING_NEAR)/(CLIPPING_FAR - CLIPPING_NEAR);
-	GLfloat proj_mat[] = {   s_x,  0.0f,  0.0f,  0.0f,	
-                            0.0f,   s_y,  0.0f,  0.0f,
-						    0.0f,  0.0f,   s_z, -1.0f, 
-                            0.0f,  0.0f,   p_z,  0.0f };
-
-    /* create VIEW MATRIX */
-	float cam_pos[] = { 0.0f, 0.0f, 2.0f };  // don't start at zero 
-                                             // or we will be too close
-	cam_yaw = 0.0f;				// y-rotation in degrees
-	mat4 T =
-		translate( identity_mat4(), vec3( -cam_pos[0], -cam_pos[1], -cam_pos[2] ) );
-	mat4 R = rotate_y_deg( identity_mat4(), -cam_yaw );
-	mat4 view_mat = R * T;
-
-	// get location numbers of matrices in shader programme 
-	GLint view_mat_location = glGetUniformLocation(shader_program, "view" );
-	GLint proj_mat_location = glGetUniformLocation(shader_program, "proj" );
-	/* use program (make current in state machine) and set default matrix values*/
-	/*glUseProgram( shader_programme );
-	glUniformMatrix4fv( view_mat_location, 1, GL_FALSE, view_mat.m );
-	glUniformMatrix4fv( proj_mat_location, 1, GL_FALSE, proj_mat );*/
-
-    //TODO comment this out
-    print_all_shader_info(shader_program);
-
-    // validate shader program (computationally expensive 
-    // TODO: remove when done testing):
     assert(program_is_valid(shader_program));
 
-    // get unique location of variable 'inputColor':
-    //color_loc = glGetUniformLocation(shader_program, "inputColor");
-    //assert(color_loc > -1);
+    // get Uniform variable locations from shaders:
+    model_mat_location = glGetUniformLocation(shader_program, "model");
+    view_mat_location = glGetUniformLocation(shader_program, "view");
+    proj_mat_location = glGetUniformLocation(shader_program, "proj");
+    
+    // free unneeded memory used when making shaders:
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    delete shaders;  
 
-    // switch to the shader program:
+    /* --- CAMERA SETUP --- */
+    aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
+    proj_mat = perspective(FOV_Y, aspect, CLIPPING_NEAR, CLIPPING_FAR);
+
+    // translation matrix:
+    T = translate(identity_mat4(),
+				  vec3(-cam_pos.v[0], -cam_pos.v[1], -cam_pos.v[2]));
+
+    // rotation matrix:
+    // make a quaternion representing negated initial camera orientation:
+	create_versor(quaternion, -cam_heading, 0.0f, 1.0f, 0.0f);
+    // convert the quaternion to a rotation matrix:
+    quat_to_mat4(R.m, quaternion);
+
+    // combine the inverse rotation and transformation to make a view matrix:
+	view_mat = R * T;
+    /* --- END CAMERA SETUP -- */
+
+    /* --- RENDER SETTINGS --- */
     glUseProgram(shader_program);
-    //glUniformMatrix4fv(matrix_location, 1, GL_FALSE, matrix);
-    glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat.m);
 
-    // assign initial color to fragment shader:
-    //glUniform4f(color_loc, 0.6f, 0.0f, 0.6f, 1.0f);
+	// unique model matrix for each sphere
+	mat4 model_mats[NUM_SPHERES];
+	for (int i=0; i<NUM_SPHERES; i++) {
+		model_mats[i] = translate(identity_mat4(), sphere_pos_wor[i]);
+	}
 
-    // set background color:
-    glClearColor(0.7f, 0.7f, 0.7f, 1.0f);  // grey
+	glEnable(GL_DEPTH_TEST);  // enable depth-testing
+	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
+	glEnable(GL_CULL_FACE);	  // enable face culling
+	glCullFace(GL_BACK);	  // cull back face
+	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
+	glClearColor(0.2, 0.2, 0.2, 1.0); // grey background
+	//glViewport(0, 0, g_gl_width, g_gl_height);
+    /* --- END RENDER SETTINGS --- */
 
-    //glEnable(GL_CULL_FACE);  // cull face
-	//glCullFace(GL_BACK);	   // cull back face
-	glFrontFace(GL_CW);      // GL_CCW for counter clock-wise
-
-    float speed = 400.0f;
-    float last_position_x = 0.0f;
-    float last_position_y = 0.0f;
-    float last_position_z = 0.0f;
+    /* --- RENDER LOOP --- */
     // continually draw until window is closed 
     while (!glfwWindowShouldClose(g_window)) {
 
@@ -242,81 +227,148 @@ int main(int argv, char** argc) {
         // clear drawing surface:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // uncomment when not using fullscreen mode:
-        //glViewport(0, 0, g_gl_width, g_gl_height);
-
         // set shader program:
         glUseProgram(shader_program);
 
-        // update the matrix
-		// - you could simplify this by just using sin(current_seconds)
-        /*
-		matrix[0] = elapsed_seconds * speed + last_position_x;
-    	matrix[5] = elapsed_seconds * speed + last_position_y;
-	    matrix[10] = elapsed_seconds * speed + last_position_z;
-
-		last_position_x = matrix[0];
-        last_position_y = matrix[5];
-        last_position_z = matrix[10];
-		if ( fabs( last_position_x ) > 4.0 ) {
-			speed = -speed;
+        // draw each sphere
+        for (int i=0; i<NUM_SPHERES; i++) {
+			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, model_mats[i].m);
+			glDrawArrays(GL_TRIANGLES, 0, point_count);
 		}
-		//
-		// Note: this call is related to the most recently 'used' shader programme
-		glUniformMatrix4fv( matrix_location, 1, GL_FALSE, matrix );*/
 
         // bind VAO:
         glBindVertexArray(vao);
 
-        // draw points 0-3 from the currently bound VAO with current 
-        // in-use shader:
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
         // update other events (i.e. user inputs);
         glfwPollEvents();
 
-        /*-----------------------------move camera
-		 * here-------------------------------*/
-		// control keys
+    	// control keys
 		bool cam_moved = false;
-		if ( glfwGetKey( g_window, GLFW_KEY_A ) ) {
-			cam_pos[0] -= CAM_SPEED * elapsed_seconds;
+        vec3 move(0.0, 0.0, 0.0);
+		float cam_yaw = 0.0f; // y-rotation in degrees
+		float cam_pitch = 0.0f;
+		float cam_roll = 0.0;
+		if (glfwGetKey(g_window, GLFW_KEY_A)) {
+			move.v[0] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_D ) ) {
-			cam_pos[0] += CAM_SPEED * elapsed_seconds;
+		if (glfwGetKey(g_window, GLFW_KEY_D)) {
+			move.v[0] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_UP ) ) {
-			cam_pos[1] += CAM_SPEED * elapsed_seconds;
+		if ( glfwGetKey(g_window, GLFW_KEY_Q)) {
+			move.v[1] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_DOWN ) ) {
-			cam_pos[1] -= CAM_SPEED * elapsed_seconds;
+		if (glfwGetKey(g_window, GLFW_KEY_E)) {
+			move.v[1] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_W ) ) {
-			cam_pos[2] -= CAM_SPEED * elapsed_seconds;
+		if (glfwGetKey(g_window, GLFW_KEY_W)) {
+			move.v[2] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_S ) ) {
-			cam_pos[2] += CAM_SPEED * elapsed_seconds;
+		if (glfwGetKey(g_window, GLFW_KEY_S)) {
+			move.v[2] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if ( glfwGetKey( g_window, GLFW_KEY_LEFT ) ) {
-			cam_yaw += CAM_YAW_SPEED * elapsed_seconds;
+			cam_yaw += CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
+
+			// create a quaternion representing change in heading (the yaw)
+			float q_yaw[4];
+			create_versor(q_yaw, cam_yaw, up.v[0], up.v[1], up.v[2]);
+
+			// add yaw rotation to the camera's current orientation
+			mult_quat_quat(quaternion, q_yaw, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
 		}
-		if ( glfwGetKey( g_window, GLFW_KEY_RIGHT ) ) {
-			cam_yaw -= CAM_YAW_SPEED * elapsed_seconds;
+		if (glfwGetKey(g_window, GLFW_KEY_RIGHT)) {
+			cam_yaw -= CAM_HEADING_SPEED * elapsed_seconds;
 			cam_moved = true;
+			float q_yaw[4];
+			create_versor(q_yaw, cam_yaw, up.v[0], up.v[1], up.v[2]);
+			mult_quat_quat(quaternion, q_yaw, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
 		}
-		/* update view matrix */
+		if (glfwGetKey(g_window, GLFW_KEY_UP)) {
+			cam_pitch += CAM_HEADING_SPEED * elapsed_seconds;
+			cam_moved = true;
+			float q_pitch[4];
+			create_versor(q_pitch, cam_pitch, rgt.v[0], rgt.v[1], rgt.v[2]);
+			mult_quat_quat(quaternion, q_pitch, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+		}
+		if (glfwGetKey( g_window, GLFW_KEY_DOWN)) {
+			cam_pitch -= CAM_HEADING_SPEED * elapsed_seconds;
+			cam_moved = true;
+			float q_pitch[4];
+			create_versor(q_pitch, cam_pitch, rgt.v[0], rgt.v[1], rgt.v[2]);
+			mult_quat_quat(quaternion, q_pitch, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+		}
+		if ( glfwGetKey(g_window, GLFW_KEY_Z) ) {
+			cam_roll -= CAM_HEADING_SPEED * elapsed_seconds;
+			cam_moved = true;
+			float q_roll[4];
+			create_versor(q_roll, cam_roll, fwd.v[0], fwd.v[1], fwd.v[2]);
+			mult_quat_quat(quaternion, q_roll, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+		}
+		if ( glfwGetKey(g_window, GLFW_KEY_C) ) {
+			cam_roll += CAM_HEADING_SPEED * elapsed_seconds;
+			cam_moved = true;
+			float q_roll[4];
+			create_versor(q_roll, cam_roll, fwd.v[0], fwd.v[1], fwd.v[2]);
+			mult_quat_quat(quaternion, q_roll, quaternion);
+
+			// recalc axes to suit new orientation
+			quat_to_mat4(R.m, quaternion);
+			fwd = R * vec4( 0.0, 0.0, -1.0, 0.0 );
+			rgt = R * vec4( 1.0, 0.0, 0.0, 0.0 );
+			up = R * vec4( 0.0, 1.0, 0.0, 0.0 );
+		}
+		// update view matrix
 		if (cam_moved) {
-			mat4 T = translate(identity_mat4(), vec3( -cam_pos[0], -cam_pos[1],
-																								 -cam_pos[2] ) ); // cam translation
-			mat4 R = rotate_y_deg( identity_mat4(), -cam_yaw );					//
-			mat4 view_mat = R * T;
+			quat_to_mat4(R.m, quaternion);
+
+			// checking for fp errors
+			//	printf ("dot fwd . up %f\n", dot (fwd, up));
+			//	printf ("dot rgt . up %f\n", dot (rgt, up));
+			//	printf ("dot fwd . rgt\n %f", dot (fwd, rgt));
+
+			cam_pos = cam_pos + vec3(fwd) * -move.v[2];
+			cam_pos = cam_pos + vec3(up) * move.v[1];
+			cam_pos = cam_pos + vec3(rgt) * move.v[0];
+			mat4 T = translate( identity_mat4(), vec3(cam_pos));
+
+			view_mat = inverse(R) * inverse(T);
 			glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
 		}
 
@@ -326,10 +378,19 @@ int main(int argv, char** argc) {
 
         // actually display the drawings:
         glfwSwapBuffers(g_window);
-    }
+    } /* --- END RENDER LOOP --- */
 
+    /* --- CLEAN UP --- */
     // close GL context and GLFW resources:
+    glDeleteBuffers(1, &points_vbo);
+    glDeleteVertexArrays(1, &vao);
+    glDeleteProgram(shader_program);
     glfwTerminate();
+
+    delete vn;
+    delete vp;
+    delete vt;
+    /* --- END CLEAN UP --- */
 
     return 0;
 }
