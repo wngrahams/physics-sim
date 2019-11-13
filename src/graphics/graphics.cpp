@@ -8,8 +8,10 @@
  * basis of this code.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "gl-utils.h"
 #include "graphics.h"
@@ -40,10 +42,9 @@ int main(int argv, char** argc) {
 
     GLuint points_vbo, colors_vbo;
     GLuint vao;
-    char vertex_shader[FILE_SIZE_VSHADER];
 	char fragment_shader[FILE_SIZE_FSHADER];
 	GLuint vs, fs, shader_program;
-	const GLchar *p;
+    GLuint* shaders;
 	int params = -1;
 	//GLint color_loc;
 
@@ -90,11 +91,22 @@ int main(int argv, char** argc) {
     glEnableVertexAttribArray(1);
 
     // load shaders from files:
+    /*
     parse_file_into_str("test_vs.glsl", vertex_shader, sizeof(vertex_shader));
     parse_file_into_str("test_fs.glsl", 
                         fragment_shader, 
-                        sizeof(fragment_shader));
+                        sizeof(fragment_shader));*/
 
+    // compile and link shader program from files:
+    vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
+    fs = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
+    shaders = new GLuint[2];
+    shaders[0] = vs;
+    shaders[1] = fs;
+    shader_program = link_shaders(shaders, 2);
+    delete shaders;  // this memory is no longer needed
+
+    /*
     // TODO: move compile, link, and error checking for both to another function
     // compile vertex shader:
     vs = glCreateShader(GL_VERTEX_SHADER);
@@ -140,6 +152,7 @@ int main(int argv, char** argc) {
         return 1;
     }
     // END TODO
+    */
 
     GLfloat matrix[] = {
 		1.5f, 0.0f, 0.0f, 0.0f, // first column
@@ -186,8 +199,9 @@ int main(int argv, char** argc) {
     //TODO comment this out
     print_all_shader_info(shader_program);
 
-    // validate shader (computationally expensive; TODO: remove when done testing):
-    assert(shader_is_valid(shader_program));
+    // validate shader program (computationally expensive 
+    // TODO: remove when done testing):
+    assert(program_is_valid(shader_program));
 
     // get unique location of variable 'inputColor':
     //color_loc = glGetUniformLocation(shader_program, "inputColor");
@@ -299,7 +313,6 @@ int main(int argv, char** argc) {
 		}
 		/* update view matrix */
 		if (cam_moved) {
-            printf("cam moved\n");
 			mat4 T = translate(identity_mat4(), vec3( -cam_pos[0], -cam_pos[1],
 																								 -cam_pos[2] ) ); // cam translation
 			mat4 R = rotate_y_deg( identity_mat4(), -cam_yaw );					//
@@ -321,35 +334,4 @@ int main(int argv, char** argc) {
     return 0;
 }
 
-bool parse_file_into_str(const char* filename, char* shader_str, int max_len) {
-    FILE* fp;
-    size_t cnt;
-    fp = fopen(filename, "r");
-    if (!fp) {
-        gl_log(ERR_LOG_YES,
-               "ERROR: could not open file \"%s\" for reading",
-               filename);
-        return false;
-    }
-
-    cnt = fread(shader_str, sizeof(char), max_len-1, fp);
-    if ((int)cnt >= max_len-1) {
-        gl_log(ERR_LOG_YES,
-               "WARNING: file \"%s\" too big for buffer, so it was truncated\n",
-               filename);
-    }
-
-    if (ferror(fp)) {
-        gl_log(ERR_LOG_YES,
-               "ERROR: error during reading of shader file \"%s\"\n",
-               filename);
-        fclose(fp);
-        return false;
-    }
-
-    // append \0 to end of file converted to string
-    shader_str[cnt] = '\0';
-    fclose(fp);
-    return true;
-}
 
