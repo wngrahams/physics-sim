@@ -19,8 +19,8 @@
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define MESH_FILE "sphere.obj"
-#define NUM_SPHERES 4
+#define MESH_FILE "plane.obj"
+#define NUM_SPHERES 1
 #define NUM_PLANES 2
 
 #define CAM_START_POS 0.0f, -10.0f, 7.5f
@@ -61,7 +61,7 @@ int main(int argv, char** argc) {
     mat4 proj_mat, view_mat, T, R;
     vec3 cam_pos(CAM_START_POS);
     // a world position for each sphere in the scene
-    vec3 sphere_pos_wor[] = { vec3( -2.0, 0.0, 0.0 ),
+    vec3 sphere_pos_wor[] = { vec3( 0.0, 0.0, 0.005 ),
                               vec3( 2.0, 0.0, 0.0 ),
 							  vec3( -2.0, 0.0, -2.0 ), 
                               vec3( 1.5, 1.0, -1.0 ) };
@@ -86,12 +86,12 @@ int main(int argv, char** argc) {
 
     load_obj_file(MESH_FILE, vp, vt, vn, point_count);
 
-    GLfloat points[] = { -10.0f,  10.0f, 0.0f, 
-                         -10.0f, -10.0f, 0.0f, 
-                          10.0f,  10.0f, 0.0f,
-                          10.0f,  10.0f, 0.0f,
-                         -10.0f, -10.0f, 0.0f,
-                          10.0f, -10.0f, 0.0f };
+    GLfloat points[] = { -5.0f,  5.0f, 0.0f, 
+                         -5.0f, -5.0f, 0.0f, 
+                          5.0f,  5.0f, 0.0f,
+                          5.0f,  5.0f, 0.0f,
+                         -5.0f, -5.0f, 0.0f,
+                          5.0f, -5.0f, 0.0f };
     float normals[] = {
 		0.0f, 0.0f, 1.0f, 
         0.0f, 0.0f, 1.0f, 
@@ -272,10 +272,10 @@ int main(int argv, char** argc) {
                                1, 
                                GL_FALSE, 
                                model_mats_sphere[i].m);
-			glDrawArrays(GL_TRIANGLES, 0, point_count);
+			glDrawArrays(GL_LINE_LOOP, 0, point_count);
 		}
         glUseProgram(shader_program_tri);
-        model_mat_tri.m[12] = sinf( current_seconds );
+        //model_mat_tri.m[12] = sinf( current_seconds );
         glUniformMatrix4fv( model_mat_location_tri, 1, GL_FALSE, model_mat_tri.m );
         glDrawArrays( GL_TRIANGLES, 0, 6 );
         /*
