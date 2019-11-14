@@ -23,7 +23,7 @@
 #define NUM_SPHERES 4
 #define NUM_PLANES 2
 
-#define CAM_START_POS 0.0f, 0.0f, 5.0f
+#define CAM_START_POS 0.0f, -10.0f, 7.5f
 
 int main(int argv, char** argc) {
 
@@ -86,9 +86,19 @@ int main(int argv, char** argc) {
 
     load_obj_file(MESH_FILE, vp, vt, vn, point_count);
 
-    GLfloat points[] = { 0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f };
+    GLfloat points[] = { -10.0f,  10.0f, 0.0f, 
+                         -10.0f, -10.0f, 0.0f, 
+                          10.0f,  10.0f, 0.0f,
+                          10.0f,  10.0f, 0.0f,
+                         -10.0f, -10.0f, 0.0f,
+                          10.0f, -10.0f, 0.0f };
     float normals[] = {
-		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f, 
+        0.0f, 0.0f, 1.0f, 
+        0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 1.0f, 
+        0.0f, 0.0f, 1.0f, 
+        0.0f, 0.0f, 1.0f
 	};
 
     /*
@@ -100,12 +110,12 @@ int main(int argv, char** argc) {
     //GLuint points_vbo;
 	glGenBuffers( 1, &points_vbo_tri );
 	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
-	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), points, GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, 18 * sizeof( GLfloat ), points, GL_STATIC_DRAW );
 
 	//GLuint normals_vbo;
 	glGenBuffers( 1, &normals_vbo_tri );
 	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo_tri );
-	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), normals, GL_STATIC_DRAW );
+	glBufferData( GL_ARRAY_BUFFER, 18 * sizeof( GLfloat ), normals, GL_STATIC_DRAW );
 
 	//GLuint vao;
 	glGenVertexArrays( 1, &vao );
@@ -231,7 +241,7 @@ int main(int argv, char** argc) {
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
 	//glEnable(GL_CULL_FACE);	  // enable face culling
 	//glCullFace(GL_BACK);	  // cull back face
-	glFrontFace(GL_CW);      // set CCW vertex order to mean the front
+	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
 	//glViewport(0, 0, g_gl_width, g_gl_height);
     /* --- END RENDER SETTINGS --- */
@@ -267,7 +277,7 @@ int main(int argv, char** argc) {
         glUseProgram(shader_program_tri);
         model_mat_tri.m[12] = sinf( current_seconds );
         glUniformMatrix4fv( model_mat_location_tri, 1, GL_FALSE, model_mat_tri.m );
-        glDrawArrays( GL_TRIANGLES, 0, 3 );
+        glDrawArrays( GL_TRIANGLES, 0, 6 );
         /*
         model_mat.m[12] = sinf( current_seconds );
 		glUniformMatrix4fv( model_mat_location, 1, GL_FALSE, model_mat.m );
