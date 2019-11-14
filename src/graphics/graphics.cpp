@@ -19,7 +19,7 @@
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define MESH_FILE "plane.obj"
+#define MESH_FILE "sphere.obj"
 #define NUM_SPHERES 4
 #define NUM_PLANES 2
 
@@ -27,12 +27,16 @@
 
 int main(int argv, char** argc) {
 
-    GLuint points_vbo, normals_vbo;
+    GLuint points_vbo_tri, points_vbo_sphere, normals_vbo_tri, normals_vbo_sphere;
     GLuint vao;
 	GLuint vs, fs, shader_program, fs_black, shader_program_black;
+    GLuint vs_tri, fs_tri, vs_sphere, fs_sphere;
     GLuint *shaders, *shaders_black, *programs;
+    GLuint *shaders_tri, *shaders_sphere;
+    GLuint shader_program_tri, shader_program_sphere;
 	
-    int model_mat_location, view_mat_location, proj_mat_location;
+    int model_mat_location_tri, view_mat_location_tri, proj_mat_location_tri;
+    int model_mat_location_sphere, view_mat_location_sphere, proj_mat_location_sphere;
 
     // camera vars:
     
@@ -62,7 +66,7 @@ int main(int argv, char** argc) {
 							  vec3( -2.0, 0.0, -2.0 ), 
                               vec3( 1.5, 1.0, -1.0 ) };
     // world position for each plane
-    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0) };
+    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.1) };
     
     // Create geometry (from file)
     GLfloat *vp = NULL;  // array of vertex points
@@ -80,91 +84,103 @@ int main(int argv, char** argc) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    //load_obj_file(MESH_FILE, vp, vt, vn, point_count);
-    point_count = 3;
+    load_obj_file(MESH_FILE, vp, vt, vn, point_count);
 
     GLfloat points[] = { 0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f };
     float normals[] = {
 		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
 	};
 
+    /*
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER*/
+
+    
     //GLuint points_vbo;
-	glGenBuffers( 1, &points_vbo );
-	glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
+	glGenBuffers( 1, &points_vbo_tri );
+	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
 	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), points, GL_STATIC_DRAW );
 
 	//GLuint normals_vbo;
-	glGenBuffers( 1, &normals_vbo );
-	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo );
+	glGenBuffers( 1, &normals_vbo_tri );
+	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo_tri );
 	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), normals, GL_STATIC_DRAW );
 
 	//GLuint vao;
 	glGenVertexArrays( 1, &vao );
 	glBindVertexArray( vao );
-	glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
 	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
-	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo_tri );
 	glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, NULL );
 	glEnableVertexAttribArray( 0 );
 	glEnableVertexAttribArray( 1 );
 
-    /*
+    
     // generate vertex attribute object (vao):
+    /*
     glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	glBindVertexArray(vao);*/
+    
 
     // load points into GPU using Vertex Buffer Object (vbo):
     if (NULL != vp) {
-		glGenBuffers(1 , &points_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+		glGenBuffers(1 , &points_vbo_sphere);
+		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_sphere);
 		glBufferData(GL_ARRAY_BUFFER, 
                      3*point_count*sizeof(GLfloat), 
                      vp,
 					 GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(2);
 	} 
     if (NULL != vn) {
-        glGenBuffers(1, &normals_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+        glGenBuffers(1, &normals_vbo_sphere);
+        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_sphere);
         glBufferData(GL_ARRAY_BUFFER, 
                      3*point_count*sizeof(GLfloat),
                      vn,
                      GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(1);
-    }*/
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(3);
+    }
 
     // get shaders from files, compile, and link:
-    vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
-    fs_black = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
-    fs = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
-    shaders = new GLuint[2];
-    shaders[0] = vs;
-    shaders[1] = fs;
-    shader_program = link_shaders(shaders, 2);
-    assert(program_is_valid(shader_program));
+    vs_tri = compile_shader("tri_vs.glsl", GL_VERTEX_SHADER);
+    vs_sphere = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
+    fs_tri = compile_shader("tri_fs.glsl", GL_FRAGMENT_SHADER);
+    fs_sphere = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
+    shaders_tri = new GLuint[4];
+    shaders_tri[0] = vs_tri;
+    shaders_tri[1] = fs_tri;
+    shader_program_tri = link_shaders(shaders_tri, 2);
+    assert(program_is_valid(shader_program_tri));
 
-    shaders_black = new GLuint[2];
-    shaders_black[0] = vs;
-    shaders_black[1] = fs_black;
-    shader_program_black = link_shaders(shaders_black, 2);
-    assert(program_is_valid(shader_program_black));
+    shaders_sphere = new GLuint[2];
+    shaders_sphere[0] = vs_sphere;
+    shaders_sphere[1] = fs_sphere;
+    shader_program_sphere = link_shaders(shaders_sphere, 2);
+    assert(program_is_valid(shader_program_sphere));
     programs = new GLuint[2];
-    programs[0] = shader_program;
-    programs[1] = shader_program_black;
+    programs[0] = shader_program_tri;
+    programs[1] = shader_program_sphere;
 
     // get Uniform variable locations from shaders:
-    model_mat_location = glGetUniformLocation(shader_program, "model");
-    view_mat_location = glGetUniformLocation(shader_program, "view");
-    proj_mat_location = glGetUniformLocation(shader_program, "proj");
-    
+    model_mat_location_tri = glGetUniformLocation(shader_program_tri, "model");
+    view_mat_location_tri = glGetUniformLocation(shader_program_tri, "view");
+    proj_mat_location_tri = glGetUniformLocation(shader_program_tri, "proj");
+    model_mat_location_sphere = glGetUniformLocation(shader_program_sphere, "model");
+    view_mat_location_sphere = glGetUniformLocation(shader_program_sphere, "view");
+    proj_mat_location_sphere = glGetUniformLocation(shader_program_sphere, "proj");
+
     // free unneeded memory used when making shaders:
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    glDeleteShader(fs_black);
-    delete shaders;  
-    delete shaders_black;
+    glDeleteShader(vs_tri);
+    glDeleteShader(fs_tri);
+    glDeleteShader(vs_sphere);
+    glDeleteShader(fs_sphere);
+    delete shaders_tri;  
+    delete shaders_sphere;
 
     /* --- CAMERA SETUP --- */
     /*
@@ -191,26 +207,30 @@ int main(int argv, char** argc) {
     // combine the inverse rotation and transformation to make a view matrix:
 	//view_mat = R * T;
     view_mat = look_at(cam_pos, vec3(0.0f, 0.0f, 0.0f), up);
+
     /* --- END CAMERA SETUP -- */
 
     /* --- RENDER SETTINGS --- */
-    glUseProgram(shader_program);
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
+    glUseProgram(shader_program_tri);
+	glUniformMatrix4fv(view_mat_location_tri, 1, GL_FALSE, view_mat.m);
+	glUniformMatrix4fv(proj_mat_location_tri, 1, GL_FALSE, proj_mat.m);
 
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat.m);
+    glUseProgram(shader_program_sphere);
+    glUniformMatrix4fv(view_mat_location_sphere, 1, GL_FALSE, view_mat.m);
+    glUniformMatrix4fv(proj_mat_location_sphere, 1, GL_FALSE, proj_mat.m);
 
 	// unique model matrix for each sphere
-    /*
-	mat4 model_mats[NUM_SPHERES];
+    
+	mat4 model_mats_sphere[NUM_SPHERES];
 	for (int i=0; i<NUM_SPHERES; i++) {
-		model_mats[i] = translate(identity_mat4(), sphere_pos_wor[i]);
-	}*/
-    mat4 model_mat = identity_mat4();
+		model_mats_sphere[i] = translate(identity_mat4(), sphere_pos_wor[i]);
+	}
+    mat4 model_mat_tri = identity_mat4();
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
-	glEnable(GL_CULL_FACE);	  // enable face culling
-	glCullFace(GL_BACK);	  // cull back face
+	//glEnable(GL_CULL_FACE);	  // enable face culling
+	//glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
 	//glViewport(0, 0, g_gl_width, g_gl_height);
@@ -233,17 +253,20 @@ int main(int argv, char** argc) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // set shader program:
-        glUseProgram(shader_program);
+        glUseProgram(shader_program_sphere);
 
         // draw each sphere 
-        /*
         for (int i=0; i<NUM_SPHERES; i++) {
-            glUseProgram(programs[0]);
-			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, model_mats[i].m);
+            glUseProgram(shader_program_sphere);
+			glUniformMatrix4fv(model_mat_location_sphere, 
+                               1, 
+                               GL_FALSE, 
+                               model_mats_sphere[i].m);
 			glDrawArrays(GL_TRIANGLES, 0, point_count);
-		}*/
-        model_mat.m[12] = sinf( current_seconds );
-        glUniformMatrix4fv( model_mat_location, 1, GL_FALSE, model_mat.m );
+		}
+        glUseProgram(shader_program_tri);
+        model_mat_tri.m[12] = sinf( current_seconds );
+        glUniformMatrix4fv( model_mat_location_tri, 1, GL_FALSE, model_mat_tri.m );
         glDrawArrays( GL_TRIANGLES, 0, 3 );
         /*
         model_mat.m[12] = sinf( current_seconds );
@@ -383,7 +406,11 @@ int main(int argv, char** argc) {
 			mat4 T = translate( identity_mat4(), vec3(cam_pos));
 
 			view_mat = inverse(R) * inverse(T);
-			glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
+            
+            glUseProgram(shader_program_tri);
+			glUniformMatrix4fv(view_mat_location_tri, 1, GL_FALSE, view_mat.m);
+            glUseProgram(shader_program_sphere);
+            glUniformMatrix4fv(view_mat_location_sphere, 1, GL_FALSE, view_mat.m);
 		}
 
         /*
@@ -406,10 +433,12 @@ int main(int argv, char** argc) {
 
     /* --- CLEAN UP --- */
     // close GL context and GLFW resources:
-    glDeleteBuffers(1, &points_vbo);
-    glDeleteBuffers(1, &normals_vbo);
+    glDeleteBuffers(1, &points_vbo_tri);
+    glDeleteBuffers(1, &normals_vbo_tri);
+    glDeleteBuffers(1, &points_vbo_sphere);
+    glDeleteBuffers(1, &normals_vbo_sphere);
     glDeleteVertexArrays(1, &vao);
-    glDeleteProgram(shader_program);
+    //glDeleteProgram(shader_program);
     glfwTerminate();
 
     delete vn;
