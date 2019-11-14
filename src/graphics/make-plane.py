@@ -9,13 +9,13 @@ with open('plane.obj', 'w') as f1:
             f1.write("v %f %f 0.000000\n" % (xf, yf))
 
     # Texture coordinates
-    f1.write("vt 0.000000, 0.000000\n")
-    f1.write("vt 0.000000, 1.000000\n")
-    f1.write("vt 1.000000, 0.000000\n")
-    f1.write("vt 1.000000, 1.000000\n")
+    f1.write("vt 0.000000 0.000000\n")
+    f1.write("vt 0.000000 1.000000\n")
+    f1.write("vt 1.000000 0.000000\n")
+    f1.write("vt 1.000000 1.000000\n")
 
     # Vertex normals
-    f1.write("vn 0.000000, 0.000000, 1.000000\n")
+    f1.write("vn 0.000000 0.000000 1.000000\n")
 
     f1.write("s 1\n")
 

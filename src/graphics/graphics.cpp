@@ -23,7 +23,7 @@
 #define NUM_SPHERES 1
 #define NUM_PLANES 2
 
-#define CAM_START_POS 0.0f, -10.0f, 7.5f
+#define CAM_START_POS 0.0f, -8.0f, 5.0f
 
 int main(int argv, char** argc) {
 
@@ -85,6 +85,22 @@ int main(int argv, char** argc) {
     glDepthFunc(GL_LESS);
 
     load_obj_file(MESH_FILE, vp, vt, vn, point_count);
+
+    /* 
+    // print all points for debugging
+    for (int i=0; i<point_count*3; i+=3) {
+        printf("point %d: ", i);
+        print(vec3(vp[i], vp[i+1], vp[i+2]));
+        printf("\n");
+    }
+
+    for (int i=0; i<point_count*3; i+=3) {
+        printf("normal %d: ", i);
+        print(vec3(vn[i], vn[i+1], vn[i+2]));
+        printf("\n");
+    }
+    */
+
 
     GLfloat points[] = { -5.0f,  5.0f, 0.0f, 
                          -5.0f, -5.0f, 0.0f, 
