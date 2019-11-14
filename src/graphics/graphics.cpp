@@ -99,7 +99,7 @@ void mult_quat_quat( float *result, const float *r, const float *s ) {
 
 int main(int argv, char** argc) {
 
-    GLuint points_vbo;
+    GLuint points_vbo, normals_vbo;
     GLuint vao;
 	GLuint vs, fs, shader_program, fs_black, shader_program_black;
     GLuint *shaders, *shaders_black, *programs;
@@ -153,17 +153,27 @@ int main(int argv, char** argc) {
     if (NULL != vp) {
 		glGenBuffers(1 , &points_vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-		glBufferData(GL_ARRAY_BUFFER, 3
-                     *point_count*sizeof(GLfloat), 
+		glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count*sizeof(GLfloat), 
                      vp,
-					 GL_STATIC_DRAW );
+					 GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glEnableVertexAttribArray(0);
 	} 
+    if (NULL != vn) {
+        glGenBuffers(1, &normals_vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+        glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count*sizeof(GLfloat),
+                     vn,
+                     GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(1);
+    }
 
     // get shaders from files, compile, and link:
     vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
-    fs_black = compile_shader("plane-black-fs.glsl", GL_FRAGMENT_SHADER);
+    fs_black = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     fs = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     shaders = new GLuint[2];
     shaders[0] = vs;
@@ -254,7 +264,7 @@ int main(int argv, char** argc) {
         for (int i=0; i<NUM_SPHERES; i++) {
             glUseProgram(programs[0]);
 			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, model_mats[i].m);
-			glDrawArrays(GL_LINE_LOOP, 0, point_count);
+			glDrawArrays(GL_TRIANGLES, 0, point_count);
 		}
 
         // bind VAO:

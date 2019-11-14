@@ -112,7 +112,7 @@ bool start_gl() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // fullscreen:
-    /*
+    /**/
     GLFWmonitor* mon = glfwGetPrimaryMonitor();
     const GLFWvidmode* vmode = glfwGetVideoMode(mon);
     g_window = glfwCreateWindow (vmode->width,
@@ -120,16 +120,16 @@ bool start_gl() {
                                  "physics-sim",
                                  mon,
                                  NULL);
-    */
+    /**/
 
     // windowed:
-    /**/
+    /*
     g_window = glfwCreateWindow(g_gl_width, 
                                 g_gl_height, 
                                 "physics-sim", 
                                 NULL, 
                                 NULL);
-    /**/
+    */
 
     if(!g_window) {
         fprintf(stderr, "ERROR: cound not open window with GLFW3\n");
