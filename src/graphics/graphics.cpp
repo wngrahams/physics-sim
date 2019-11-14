@@ -14,88 +14,16 @@
 #include <stdio.h>
 
 #include "gl-utils.h"
+#include "camera.hpp"
 #include "graphics.h"
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define MESH_FILE "sphere.obj"
+#define MESH_FILE "plane.obj"
 #define NUM_SPHERES 4
 #define NUM_PLANES 2
 
-#define CLIPPING_NEAR     (0.1f)
-#define CLIPPING_FAR      (1000.0f)
-#define FOV_Y             (67.0f)
-#define CAM_SPEED         (10000.0f)    // 5 = 1 unit per second
-#define CAM_HEADING_SPEED (80000.0f)  // 100 = 30 degrees per second
-#define CAM_START_POS     0.0f, 0.0f, 5.0f
-
-#define DIR_FD 0.0f, 0.0f, -1.0f, 0.0f
-#define DIR_RT 1.0f, 0.0f, 0.0f, 0.0f 
-#define DIR_UP 0.0f, 1.0f, 0.0f, 0.0f
-
-/* create a unit quaternion q from an angle in degrees a, and an axis x,y,z */
-void create_versor( float *q, float degrees, float x, float y, float z ) {
-	float rad = ONE_DEG_IN_RAD * degrees;
-	q[0] = cosf( rad / 2.0f );
-	q[1] = sinf( rad / 2.0f ) * x;
-	q[2] = sinf( rad / 2.0f ) * y;
-	q[3] = sinf( rad / 2.0f ) * z;
-}
-
-/* convert a unit quaternion q to a 4x4 matrix m */
-void quat_to_mat4( float *m, const float *q ) {
-	float w = q[0];
-	float x = q[1];
-	float y = q[2];
-	float z = q[3];
-	m[0] = 1.0f - 2.0f * y * y - 2.0f * z * z;
-	m[1] = 2.0f * x * y + 2.0f * w * z;
-	m[2] = 2.0f * x * z - 2.0f * w * y;
-	m[3] = 0.0f;
-	m[4] = 2.0f * x * y - 2.0f * w * z;
-	m[5] = 1.0f - 2.0f * x * x - 2.0f * z * z;
-	m[6] = 2.0f * y * z + 2.0f * w * x;
-	m[7] = 0.0f;
-	m[8] = 2.0f * x * z + 2.0f * w * y;
-	m[9] = 2.0f * y * z - 2.0f * w * x;
-	m[10] = 1.0f - 2.0f * x * x - 2.0f * y * y;
-	m[11] = 0.0f;
-	m[12] = 0.0f;
-	m[13] = 0.0f;
-	m[14] = 0.0f;
-	m[15] = 1.0f;
-}
-
-/* normalise a quaternion in case it got a bit mangled */
-void normalise_quat( float *q ) {
-	// norm(q) = q / magnitude (q)
-	// magnitude (q) = sqrt (w*w + x*x...)
-	// only compute sqrt if interior sum != 1.0
-	float sum = q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3];
-	// NB: floats have min 6 digits of precision
-	const float thresh = 0.0001f;
-	if ( fabs( 1.0f - sum ) < thresh ) {
-		return;
-	}
-	float mag = sqrt( sum );
-	for ( int i = 0; i < 4; i++ ) {
-		q[i] = q[i] / mag;
-	}
-}
-
-/* multiply quaternions to get another one. result=R*S */
-/* will need to normalize after */
-void mult_quat_quat( float *result, const float *r, const float *s ) {
-	float w = s[0] * r[0] - s[1] * r[1] - s[2] * r[2] - s[3] * r[3];
-	float x = s[0] * r[1] + s[1] * r[0] - s[2] * r[3] + s[3] * r[2];
-	float y = s[0] * r[2] + s[1] * r[3] + s[2] * r[0] - s[3] * r[1];
-	float z = s[0] * r[3] - s[1] * r[2] + s[2] * r[1] + s[3] * r[0];
-	result[0] = w;
-	result[1] = x;
-	result[2] = y;
-    result[3] = z;
-    normalise_quat(result);
-}
+#define CAM_START_POS 0.0f, 0.0f, 5.0f
 
 int main(int argv, char** argc) {
 
@@ -107,17 +35,26 @@ int main(int argv, char** argc) {
     int model_mat_location, view_mat_location, proj_mat_location;
 
     // camera vars:
+    
     float aspect;
     float cam_heading = 0.0f;
     float quaternion[4];
+    
 
     // keep track of some useful vectors that can be used for keyboard movement
+    
 	vec4 fd(DIR_FD);
 	vec4 rt(DIR_RT);
 	vec4 up(DIR_UP);
+    
 
     // camera matricies:
-    mat4 view_mat, proj_mat, T, R;
+    /*
+    mat4 *view_mat = new mat4();
+    mat4 *proj_mat = new mat4();// T, R;
+    */
+
+    mat4 proj_mat, view_mat, T, R;
     vec3 cam_pos(CAM_START_POS);
     // a world position for each sphere in the scene
     vec3 sphere_pos_wor[] = { vec3( -2.0, 0.0, 0.0 ),
@@ -143,8 +80,35 @@ int main(int argv, char** argc) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    load_obj_file(MESH_FILE, vp, vt, vn, point_count);
+    //load_obj_file(MESH_FILE, vp, vt, vn, point_count);
+    point_count = 3;
 
+    GLfloat points[] = { 0.0f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f };
+    float normals[] = {
+		0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+	};
+
+    //GLuint points_vbo;
+	glGenBuffers( 1, &points_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
+	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), points, GL_STATIC_DRAW );
+
+	//GLuint normals_vbo;
+	glGenBuffers( 1, &normals_vbo );
+	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo );
+	glBufferData( GL_ARRAY_BUFFER, 9 * sizeof( GLfloat ), normals, GL_STATIC_DRAW );
+
+	//GLuint vao;
+	glGenVertexArrays( 1, &vao );
+	glBindVertexArray( vao );
+	glBindBuffer( GL_ARRAY_BUFFER, points_vbo );
+	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo );
+	glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, NULL );
+	glEnableVertexAttribArray( 0 );
+	glEnableVertexAttribArray( 1 );
+
+    /*
     // generate vertex attribute object (vao):
     glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
@@ -169,7 +133,7 @@ int main(int argv, char** argc) {
                      GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glEnableVertexAttribArray(1);
-    }
+    }*/
 
     // get shaders from files, compile, and link:
     vs = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
@@ -203,6 +167,14 @@ int main(int argv, char** argc) {
     delete shaders_black;
 
     /* --- CAMERA SETUP --- */
+    /*
+    Camera camera((float)g_gl_width,
+                  (float)g_gl_height,
+                  vec3(CAM_START_POS),
+                  view_mat,
+                  proj_mat);
+                  */
+    
     aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
     proj_mat = perspective(FOV_Y, aspect, CLIPPING_NEAR, CLIPPING_FAR);
 
@@ -224,19 +196,22 @@ int main(int argv, char** argc) {
     /* --- RENDER SETTINGS --- */
     glUseProgram(shader_program);
 	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
+
 	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat.m);
 
 	// unique model matrix for each sphere
+    /*
 	mat4 model_mats[NUM_SPHERES];
 	for (int i=0; i<NUM_SPHERES; i++) {
 		model_mats[i] = translate(identity_mat4(), sphere_pos_wor[i]);
-	}
+	}*/
+    mat4 model_mat = identity_mat4();
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
 	glEnable(GL_CULL_FACE);	  // enable face culling
 	glCullFace(GL_BACK);	  // cull back face
-	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
+	glFrontFace(GL_CW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
 	//glViewport(0, 0, g_gl_width, g_gl_height);
     /* --- END RENDER SETTINGS --- */
@@ -258,14 +233,22 @@ int main(int argv, char** argc) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // set shader program:
-        //glUseProgram(shader_program);
+        glUseProgram(shader_program);
 
-        // draw each sphere
+        // draw each sphere 
+        /*
         for (int i=0; i<NUM_SPHERES; i++) {
             glUseProgram(programs[0]);
 			glUniformMatrix4fv(model_mat_location, 1, GL_FALSE, model_mats[i].m);
 			glDrawArrays(GL_TRIANGLES, 0, point_count);
-		}
+		}*/
+        model_mat.m[12] = sinf( current_seconds );
+        glUniformMatrix4fv( model_mat_location, 1, GL_FALSE, model_mat.m );
+        glDrawArrays( GL_TRIANGLES, 0, 3 );
+        /*
+        model_mat.m[12] = sinf( current_seconds );
+		glUniformMatrix4fv( model_mat_location, 1, GL_FALSE, model_mat.m );
+        */
 
         // bind VAO:
         glBindVertexArray(vao);
@@ -280,27 +263,27 @@ int main(int argv, char** argc) {
 		float cam_pitch = 0.0f;
 		float cam_roll = 0.0;
 		if (glfwGetKey(g_window, GLFW_KEY_A)) {
-			move.v[0] -= CAM_SPEED * elapsed_seconds;
+			move.v[IDX_RT] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_D)) {
-			move.v[0] += CAM_SPEED * elapsed_seconds;
+			move.v[IDX_RT] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if ( glfwGetKey(g_window, GLFW_KEY_Q)) {
-			move.v[1] += CAM_SPEED * elapsed_seconds;
+			move.v[IDX_UP] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_E)) {
-			move.v[1] -= CAM_SPEED * elapsed_seconds;
+			move.v[IDX_UP] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_W)) {
-			move.v[2] -= CAM_SPEED * elapsed_seconds;
+			move.v[IDX_FD] -= CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if (glfwGetKey(g_window, GLFW_KEY_S)) {
-			move.v[2] += CAM_SPEED * elapsed_seconds;
+			move.v[IDX_FD] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
 		if ( glfwGetKey( g_window, GLFW_KEY_LEFT ) ) {
@@ -394,14 +377,24 @@ int main(int argv, char** argc) {
 			//	printf ("dot rgt . up %f\n", dot (rgt, up));
 			//	printf ("dot fwd . rgt\n %f", dot (fwd, rgt));
 
-			cam_pos = cam_pos + vec3(fd) * -move.v[2];
-			cam_pos = cam_pos + vec3(up) * move.v[1];
-			cam_pos = cam_pos + vec3(rt) * move.v[0];
+			cam_pos = cam_pos + vec3(fd) * -move.v[IDX_FD];
+			cam_pos = cam_pos + vec3(up) *  move.v[IDX_UP];
+			cam_pos = cam_pos + vec3(rt) *  move.v[IDX_RT];
 			mat4 T = translate( identity_mat4(), vec3(cam_pos));
 
 			view_mat = inverse(R) * inverse(T);
 			glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat.m);
 		}
+
+        /*
+        if (camera.move_camera(g_window, elapsed_seconds)) {
+            fprintf(stderr, " hmmm ");
+            print(*view_mat);
+            print(*proj_mat);
+            glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat->m);
+            glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat->m);
+            fprintf(stderr, " mhhh" );
+        }*/
 
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(g_window, 1);  // close window on esc press
@@ -414,6 +407,7 @@ int main(int argv, char** argc) {
     /* --- CLEAN UP --- */
     // close GL context and GLFW resources:
     glDeleteBuffers(1, &points_vbo);
+    glDeleteBuffers(1, &normals_vbo);
     glDeleteVertexArrays(1, &vao);
     glDeleteProgram(shader_program);
     glfwTerminate();
@@ -425,5 +419,4 @@ int main(int argv, char** argc) {
 
     return 0;
 }
-
 

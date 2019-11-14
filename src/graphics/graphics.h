@@ -10,9 +10,6 @@
 #ifndef __GRAPHICS_H__
 #define __GRAPHICS_H__
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
 #include "gl-utils.h"
 
 // externed variables -- keep track of window size for viewport and mouse

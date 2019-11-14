@@ -150,5 +150,12 @@ versor slerp( const versor &q, const versor &r );
 versor normalise( versor &q );
 void print( const versor &q );
 versor slerp( versor &q, versor &r, float t );
+
+// added by graham:
+void create_versor(float*, float, float, float, float);
+void quat_to_mat4(float*, const float*);
+void normalize_quat(float*);
+void mult_quat_quat(float*, const float*, const float*);
+
 #endif
 

@@ -23,6 +23,18 @@
 #define MAX_LOG_LEN 2048
 #define MAX_SHADER_LENGTH 262144
 
+#define DIR_FD 0.0f, 0.0f, -1.0f, 0.0f
+#define DIR_RT 1.0f, 0.0f, 0.0f, 0.0f 
+#define DIR_UP 0.0f, 1.0f, 0.0f, 0.0f
+
+#define VEC3_FD vec3(0.0f, 0.0f, -1.0f)
+#define VEC3_RT vec3(1.0f, 0.0f, 0.0f)
+#define VEC3_UP vec3(0.0f, 1.0f, 0.0f)
+
+#define IDX_FD 2
+#define IDX_RT 0
+#define IDX_UP 1
+
 // extern variables:
 extern int g_gl_width;
 extern int g_gl_height;
