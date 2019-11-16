@@ -22,6 +22,7 @@
 #define MESH_FILE "plane.obj"
 #define NUM_SPHERES 1
 #define NUM_PLANES 2
+#define NUM_CUBES
 
 #define CAM_START_POS 0.0f, -8.0f, 5.0f
 
@@ -37,31 +38,29 @@ int main(int argv, char** argc) {
 	
     int model_mat_location_tri, view_mat_location_tri, proj_mat_location_tri;
     int model_mat_location_sphere, view_mat_location_sphere, proj_mat_location_sphere;
+    GLsizeiptr current_vbo_offset;
 
-    // camera vars:
+    GLuint ground_vao_id;
+    GLuint grid_vao_id;
     
+    // camera vars:
     float aspect;
     float cam_heading = 0.0f;
     float quaternion[4];
     
 
-    // keep track of some useful vectors that can be used for keyboard movement
-    
+    // keep track of some useful vectors that can be used for keyboard movement  
 	vec4 fd(DIR_FD);
 	vec4 rt(DIR_RT);
 	vec4 up(DIR_UP);
     
 
     // camera matricies:
-    /*
-    mat4 *view_mat = new mat4();
-    mat4 *proj_mat = new mat4();// T, R;
-    */
-
     mat4 proj_mat, view_mat, T, R;
     vec3 cam_pos(CAM_START_POS);
+
     // a world position for each sphere in the scene
-    vec3 sphere_pos_wor[] = { vec3( 0.0, 0.0, 0.005 ),
+    vec3 sphere_pos_wor[] = { vec3( 0.0, 0.0, 1.0 ),
                               vec3( 2.0, 0.0, 0.0 ),
 							  vec3( -2.0, 0.0, -2.0 ), 
                               vec3( 1.5, 1.0, -1.0 ) };
@@ -73,6 +72,7 @@ int main(int argv, char** argc) {
 	GLfloat *vn = NULL;  // array of vertex normals
 	GLfloat *vt = NULL;  // array of texture coordinates
 	int point_count = 0;
+    int total_num_points = 0;
 	
     // restart log file:
     restart_gl_log();
@@ -85,6 +85,7 @@ int main(int argv, char** argc) {
     glDepthFunc(GL_LESS);
 
     load_obj_file(MESH_FILE, vp, vt, vn, point_count);
+    total_num_points += point_count;
 
     /* 
     // print all points for debugging
@@ -108,7 +109,8 @@ int main(int argv, char** argc) {
                           5.0f,  5.0f, 0.0f,
                          -5.0f, -5.0f, 0.0f,
                           5.0f, -5.0f, 0.0f };
-    float normals[] = {
+    total_num_points += 6;
+    GLfloat normals[] = {
 		0.0f, 0.0f, 1.0f, 
         0.0f, 0.0f, 1.0f, 
         0.0f, 0.0f, 1.0f,
@@ -116,6 +118,12 @@ int main(int argv, char** argc) {
         0.0f, 0.0f, 1.0f, 
         0.0f, 0.0f, 1.0f
 	};
+    GLfloat plane_ac[] = { 0.2, 0.2, 0.2 };
+    GLfloat plane_drc[] = { 0.05, 0.05, 0.05 };
+    GLfloat grid_ac[] = { 1.0, 0.0, 0.0 };
+    GLfloat grid_drc[] = { 1.0, 0.0, 0.0 };
+
+    total_num_points += 6;
 
     /**/
     
@@ -123,10 +131,160 @@ int main(int argv, char** argc) {
     // vbo:
     GLuint vbo;
     glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 
+                 total_num_points * 3 * sizeof(GLfloat), 
+                 0,                                   // vbo is currently empty
+                 GL_STATIC_DRAW);
 
+    current_vbo_offset = 0;
 
+    // add ground plane and ground plane for grid:
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    6 * 3 * sizeof(GLfloat),  // plane vertex buffer size
+                    points // ground plane verticies
+                   );
+    current_vbo_offset += 6 * 3 * sizeof(GLfloat);
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    6 * 3 * sizeof(GLfloat),
+                    normals
+                   );
+    current_vbo_offset += 6 * 3 * sizeof(GLfloat);
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    3 * sizeof(GLfloat),
+                    plane_ac
+                   );
+    current_vbo_offset += 3 * sizeof(GLfloat);
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    3 * sizeof(GLfloat),
+                    plane_drc
+                   );
+    current_vbo_offset += 3 * sizeof(GLfloat);
     
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    point_count * 3 * sizeof(GLfloat),
+                    vp
+                   );
+    current_vbo_offset += point_count * 3 * sizeof(GLfloat);    
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    point_count * 3 * sizeof(GLfloat),
+                    vn
+                   );
+    current_vbo_offset += point_count * 3 * sizeof(GLfloat);
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    3 * sizeof(GLfloat),
+                    grid_ac
+                   );
+    current_vbo_offset += 3 * sizeof(GLfloat);
+
+    glBufferSubData(GL_ARRAY_BUFFER,
+                    current_vbo_offset,
+                    3 * sizeof(GLfloat),
+                    grid_drc
+                   );
+    current_vbo_offset += 3 * sizeof(GLfloat);
+
+    // VBO DONE
+    
+    // VAO for each type of object:
+    // generate VAOs:
+    glGenVertexArrays(1, &ground_vao_id);
+    glGenVertexArrays(1, &grid_vao_id);
+
+    // bind VAOs:
+    current_vbo_offset = 0;
+    // ground
+    glBindVertexArray(ground_vao_id);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(0,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)0  // vbo offset
+                         );  // verticies
+    glEnableVertexAttribArray(0);
+    current_vbo_offset += 6 * 3 * sizeof(GLfloat);
+    glVertexAttribPointer(1,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_TRUE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset  // vbo offset
+                         );  // normals
+    glEnableVertexAttribArray(1);
+    current_vbo_offset += 6 * 3 * sizeof(GLfloat);
+    glVertexAttribPointer(2,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset  // vbo offset
+                         );  // ground_ac
+    current_vbo_offset += 3 * sizeof(GLfloat);
+    glVertexAttribPointer(3,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset  // vbo offset
+                         );  // ground_drc
+    current_vbo_offset += 3 * sizeof(GLfloat);
+
+    // grid
+    glBindVertexArray(grid_vao_id);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexAttribPointer(1,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset 
+                         );  // verticies
+    glEnableVertexAttribArray(0);
+    current_vbo_offset += point_count * 3 * sizeof(GLfloat);
+    glVertexAttribPointer(1,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_TRUE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset 
+                         );  // normals
+    glEnableVertexAttribArray(1);
+    current_vbo_offset += point_count * 3 * sizeof(GLfloat);
+    glVertexAttribPointer(2,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset  // vbo offset
+                         );  // grid_ac
+    current_vbo_offset += 3 * sizeof(GLfloat);
+    glVertexAttribPointer(3,  // index
+                          3,  // triangles
+                          GL_FLOAT,  // data type
+                          GL_FALSE,  // normalize?
+                          0,  // stride
+                          (GLvoid*)current_vbo_offset  // vbo offset
+                         );  // grid_drc
+    current_vbo_offset += 3 * sizeof(GLfloat);
+
+
+    // END VAOs
+
+    /*
     //GLuint points_vbo;
 	glGenBuffers( 1, &points_vbo_tri );
 	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
@@ -146,14 +304,14 @@ int main(int argv, char** argc) {
 	glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, NULL );
 	glEnableVertexAttribArray( 0 );
 	glEnableVertexAttribArray( 1 );
-
+    */
     
     // generate vertex attribute object (vao):
     /*
     glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);*/
     
-
+    /*
     // load points into GPU using Vertex Buffer Object (vbo):
     if (NULL != vp) {
 		glGenBuffers(1 , &points_vbo_sphere);
@@ -174,12 +332,12 @@ int main(int argv, char** argc) {
                      GL_STATIC_DRAW);
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glEnableVertexAttribArray(3);
-    }
+    }*/
 
     // get shaders from files, compile, and link:
     vs_tri = compile_shader("tri_vs.glsl", GL_VERTEX_SHADER);
-    vs_sphere = compile_shader("test_vs.glsl", GL_VERTEX_SHADER);
-    fs_tri = compile_shader("tri_fs.glsl", GL_FRAGMENT_SHADER);
+    vs_sphere = compile_shader("tri_vs.glsl", GL_VERTEX_SHADER);
+    fs_tri = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     fs_sphere = compile_shader("test_fs.glsl", GL_FRAGMENT_SHADER);
     shaders_tri = new GLuint[4];
     shaders_tri[0] = vs_tri;
@@ -283,18 +441,20 @@ int main(int argv, char** argc) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // set shader program:
-        glUseProgram(shader_program_sphere);
+        glUseProgram(shader_program_tri);
 
         // draw each sphere 
+        glBindVertexArray(grid_vao_id);
         for (int i=0; i<NUM_SPHERES; i++) {
-            glUseProgram(shader_program_sphere);
-			glUniformMatrix4fv(model_mat_location_sphere, 
+            //glUseProgram(shader_program_sphere);
+			glUniformMatrix4fv(model_mat_location_tri, 
                                1, 
                                GL_FALSE, 
                                model_mats_sphere[i].m);
 			glDrawArrays(GL_LINE_LOOP, 0, point_count);
 		}
         glUseProgram(shader_program_tri);
+        glBindVertexArray(ground_vao_id);
         //model_mat_tri.m[12] = sinf( current_seconds );
         glUniformMatrix4fv( model_mat_location_tri, 1, GL_FALSE, model_mat_tri.m );
         glDrawArrays( GL_TRIANGLES, 0, 6 );
@@ -304,7 +464,7 @@ int main(int argv, char** argc) {
         */
 
         // bind VAO:
-        glBindVertexArray(vao);
+        //glBindVertexArray(vao);
 
         // update other events (i.e. user inputs);
         glfwPollEvents();
