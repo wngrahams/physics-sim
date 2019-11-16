@@ -12,7 +12,7 @@ vec3 La = vec3 (1.0, 0.0, 0.0); // red ambient colour
   
 // surface reflectance
 vec3 Ks = vec3 (0.5, 0.5, 0.5); // fully reflect specular light
-vec3 Kd = vec3 (0.5, 0.0, 1.0); // purple diffuse surface reflectance
+vec3 Kd = vec3 (1.0, 0.0, 0.0); // red diffuse surface reflectance
 vec3 Ka = vec3 (1.0, 1.0, 1.0); // fully reflect ambient light
 float specular_exponent = 100.0; // specular 'power'
 

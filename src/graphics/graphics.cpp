@@ -121,9 +121,9 @@ int main(int argv, char** argc) {
     
     /* One vbo, multiple vao's (one vao for each model): */
     // vbo:
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER);
+    //GLuint vbo;
+    //glGenBuffers(1, &vbo);
+    //glBindBuffer(GL_ARRAY_BUFFER);
 
 
     
