@@ -15,7 +15,7 @@ using namespace std;
 #define DIMENSIONS 3
 
 // world variables
-#define G -9.80665
+#define G -9.807
 #define K_GROUND 100000.0
 #define DT 0.1
 #define V_DAMP_CONST 1.0
@@ -50,6 +50,9 @@ void add_ground_force(vector<Mass> &, vector<Spring> &, vector<vector<double>> &
 void update_position(vector<Mass> &, vector<Spring> &, vector<vector<double>> &);
 // calculate total energy of cube
 double calculate_energy(vector<Mass> &, vector<Spring> &);
+// print mass object
+void print_mass(vector<Mass> &, int);
+
 
 
 
