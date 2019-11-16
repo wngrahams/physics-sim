@@ -117,10 +117,14 @@ int main(int argv, char** argc) {
         0.0f, 0.0f, 1.0f
 	};
 
-    /*
+    /**/
+    
+    /* One vbo, multiple vao's (one vao for each model): */
+    // vbo:
+    GLuint vbo;
     glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER*/
+    glBindBuffer(GL_ARRAY_BUFFER);
+
 
     
     //GLuint points_vbo;
