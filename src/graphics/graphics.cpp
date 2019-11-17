@@ -19,7 +19,7 @@
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define MESH_FILE "plane.obj"
+#define PLANE_FILE "plane.obj"
 #define NUM_SPHERES 1
 #define NUM_PLANES 2
 
@@ -66,7 +66,7 @@ int main(int argv, char** argc) {
 							  vec3( -2.0, 0.0, -2.0 ), 
                               vec3( 1.5, 1.0, -1.0 ) };
     // world position for each plane
-    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.1) };
+    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.005) };
     
     // Create geometry (from file)
     GLfloat *vp = NULL;  // array of vertex points
@@ -84,7 +84,7 @@ int main(int argv, char** argc) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    load_obj_file(MESH_FILE, vp, vt, vn, point_count);
+    load_obj_file(PLANE_FILE, vp, vt, vn, point_count);
 
     /* 
     // print all points for debugging
@@ -117,16 +117,7 @@ int main(int argv, char** argc) {
         0.0f, 0.0f, 1.0f
 	};
 
-    /**/
-    
-    /* One vbo, multiple vao's (one vao for each model): */
-    // vbo:
-    //GLuint vbo;
-    //glGenBuffers(1, &vbo);
-    //glBindBuffer(GL_ARRAY_BUFFER);
-
-
-    
+        
     //GLuint points_vbo;
 	glGenBuffers( 1, &points_vbo_tri );
 	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
@@ -146,12 +137,6 @@ int main(int argv, char** argc) {
 	glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, NULL );
 	glEnableVertexAttribArray( 0 );
 	glEnableVertexAttribArray( 1 );
-
-    
-    // generate vertex attribute object (vao):
-    /*
-    glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);*/
     
 
     // load points into GPU using Vertex Buffer Object (vbo):
@@ -213,14 +198,6 @@ int main(int argv, char** argc) {
     delete shaders_sphere;
 
     /* --- CAMERA SETUP --- */
-    /*
-    Camera camera((float)g_gl_width,
-                  (float)g_gl_height,
-                  vec3(CAM_START_POS),
-                  view_mat,
-                  proj_mat);
-                  */
-    
     aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
     proj_mat = perspective(FOV_Y, aspect, CLIPPING_NEAR, CLIPPING_FAR);
 
@@ -237,7 +214,6 @@ int main(int argv, char** argc) {
     // combine the inverse rotation and transformation to make a view matrix:
 	//view_mat = R * T;
     view_mat = look_at(cam_pos, vec3(0.0f, 0.0f, 0.0f), up);
-
     /* --- END CAMERA SETUP -- */
 
     /* --- RENDER SETTINGS --- */
@@ -259,11 +235,10 @@ int main(int argv, char** argc) {
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
-	//glEnable(GL_CULL_FACE);	  // enable face culling
-	//glCullFace(GL_BACK);	  // cull back face
+	glEnable(GL_CULL_FACE);	  // enable face culling
+	glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
-	//glViewport(0, 0, g_gl_width, g_gl_height);
     /* --- END RENDER SETTINGS --- */
 
     /* --- RENDER LOOP --- */
@@ -442,16 +417,6 @@ int main(int argv, char** argc) {
             glUseProgram(shader_program_sphere);
             glUniformMatrix4fv(view_mat_location_sphere, 1, GL_FALSE, view_mat.m);
 		}
-
-        /*
-        if (camera.move_camera(g_window, elapsed_seconds)) {
-            fprintf(stderr, " hmmm ");
-            print(*view_mat);
-            print(*proj_mat);
-            glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view_mat->m);
-            glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, proj_mat->m);
-            fprintf(stderr, " mhhh" );
-        }*/
 
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(g_window, 1);  // close window on esc press
