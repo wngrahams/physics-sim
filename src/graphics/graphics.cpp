@@ -26,7 +26,7 @@
 
 #define NUM_SHADER_PROGRAMS 3
 
-#define CAM_START_POS 0.0f, -12.0f, 8.0f
+#define CAM_START_POS 0.0f, 0.0f, 8.0f
 
 int main(int argv, char** argc) {
 
@@ -66,7 +66,40 @@ int main(int argv, char** argc) {
 							  vec3( -2.0, 0.0, 2.0 ), 
                               vec3( 1.5, 1.0, 1.0 ) };
     // world position for each plane
-    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.005) };
+    vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.002) };
+
+    // rectangle for testing indicies:
+    GLfloat rectangle_points[] = {
+                                -1.0, -1.0, 2.0,
+                                1.0, -1.0, 2.0,
+                                -1.0, 1.0, 2.0,
+                                1.0, 1.0, 2.0,
+                                -1.0, 1.0, -2.0,
+                                1.0, -1.0, -2.0,
+                                -1.0, -1.0, -2.0,
+                                1.0, -1.0, -2.0 };
+    GLfloat rectangle_normals[] = {
+                                0.0, 0.0, 1.0,
+                                1.0, 1.0, 0.0,
+                                0.0, 0.0, -1.0,
+                                0.0, -1.0, 0.0,
+                                1.0, 0.0, 0.0,
+                                -1.0, 0.0, 0.0 };
+    GLshort rectangle_indicies[] = {
+                                0, 1, 2, //0,
+                                2, 1, 3, //0,
+                                2, 3, 4, //1,
+                                4, 3, 5, //1,
+                                4, 5, 6, //2,
+                                6, 5, 7, //2,
+                                6, 7, 0, //3,
+                                0, 7, 1, //3,
+                                1, 7, 3, //4,
+                                3, 7, 5, //4,
+                                6, 0, 4, //5,
+                                4, 0, 2};//, //5 };
+
+    // END TRIANGLE
     
     // Create geometry (from file)
     GLfloat *vp_plane = NULL;  // array of vertex points
@@ -92,20 +125,20 @@ int main(int argv, char** argc) {
     load_obj_file(PLANE_FILE, vp_plane, vt_plane, vn_plane, point_count_plane);
     load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube );
 
-    /* 
+     
     // print all points for debugging
-    for (int i=0; i<point_count*3; i+=3) {
-        printf("point %d: ", i);
-        print(vec3(vp[i], vp[i+1], vp[i+2]));
+    for (int i=0; i<point_count_cube*3; i+=3) {
+        printf("point %d: ", i/3);
+        print(vec3(vp_cube[i], vp_cube[i+1], vp_cube[i+2]));
         printf("\n");
     }
 
-    for (int i=0; i<point_count*3; i+=3) {
-        printf("normal %d: ", i);
-        print(vec3(vn[i], vn[i+1], vn[i+2]));
+    for (int i=0; i<point_count_cube*3; i+=3) {
+        printf("normal %d: ", i/3);
+        print(vec3(vn_cube[i], vn_cube[i+1], vn_cube[i+2]));
         printf("\n");
     }
-    */
+    
 
 	//GLuint vao;
 	glGenVertexArrays(1, &vao);
@@ -129,9 +162,10 @@ int main(int argv, char** argc) {
                      3*point_count_plane*sizeof(GLfloat),
                      vn_plane,
                      GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, NULL);
         glEnableVertexAttribArray(1);
     }
+    
     if (NULL != vp_cube) {
         glGenBuffers(1 , &points_vbo_cube);
 		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube);
@@ -149,9 +183,26 @@ int main(int argv, char** argc) {
                      3*point_count_cube*sizeof(GLfloat),
                      vn_cube,
                      GL_STATIC_DRAW);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_TRUE, 0, NULL);
         glEnableVertexAttribArray(3);
     }
+    
+    /* 
+    GLuint verticies_vbo_rect;
+    glGenBuffers(1, &verticies_vbo_rect);
+    glBindBuffer(GL_ARRAY_BUFFER, verticies_vbo_rect);
+    glBufferData(GL_ARRAY_BUFFER,
+                    3*8*sizeof(GLfloat),
+                    rectangle_points,
+                    GL_STATIC_DRAW);
+    GLuint indicies_vbo_rect;
+    glGenBuffers(1, &indicies_vbo_rect);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicies_vbo_rect);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
+                    sizeof(rectangle_indicies), rectangle_indicies,
+                    GL_STATIC_DRAW);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    */
 
     // get shaders from files, compile, and link:
     vs_ground = compile_shader("ground_vs.glsl", GL_VERTEX_SHADER);
@@ -312,31 +363,27 @@ int main(int argv, char** argc) {
             glDrawArrays(GL_TRIANGLES, 0, point_count_cube);
         }
 
-        /*
-        // set shader program:
-        glUseProgram(shader_program_sphere);
-
-        // draw each sphere 
-        for (int i=0; i<NUM_PLANES; i++) {
-            glUseProgram(shader_program_sphere);
-			glUniformMatrix4fv(model_mat_location_sphere, 
-                               1, 
-                               GL_FALSE, 
-                               model_mats_sphere[i].m);
-			glDrawArrays(GL_LINE_LOOP, 0, point_count);
-		}
-        glUseProgram(shader_program_tri);
-        //model_mat_tri.m[12] = sinf( current_seconds );
-        glUniformMatrix4fv( model_mat_location_tri, 1, GL_FALSE, model_mat_tri.m );
-        glDrawArrays( GL_TRIANGLES, 0, 6 );
-        */
-        /*
-        model_mat.m[12] = sinf( current_seconds );
-		glUniformMatrix4fv( model_mat_location, 1, GL_FALSE, model_mat.m );
-        */
-
         // bind VAO:
         glBindVertexArray(vao);
+
+        /*
+        vp_cube[5] = sinf(current_seconds);
+        vp_cube[7] = sinf(current_seconds);
+        vp_cube[10] = sinf(current_seconds);
+        vp_cube[26] = sinf(current_seconds);
+        vp_cube[27] = sinf(current_seconds);
+        */
+        //printf("
+
+        /*
+        glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube);
+        glBufferData(GL_ARRAY_BUFFER, 
+                    3*point_count_cube*sizeof(GLfloat), 
+                    vp_cube,
+                    GL_DYNAMIC_DRAW);
+                    */
+
+
 
         // update other events (i.e. user inputs);
         glfwPollEvents();
