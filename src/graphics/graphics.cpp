@@ -68,38 +68,6 @@ int main(int argv, char** argc) {
     // world position for each plane
     vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.002) };
 
-    // rectangle for testing indicies:
-    GLfloat rectangle_points[] = {
-                                -1.0, -1.0, 2.0,
-                                1.0, -1.0, 2.0,
-                                -1.0, 1.0, 2.0,
-                                1.0, 1.0, 2.0,
-                                -1.0, 1.0, -2.0,
-                                1.0, -1.0, -2.0,
-                                -1.0, -1.0, -2.0,
-                                1.0, -1.0, -2.0 };
-    GLfloat rectangle_normals[] = {
-                                0.0, 0.0, 1.0,
-                                1.0, 1.0, 0.0,
-                                0.0, 0.0, -1.0,
-                                0.0, -1.0, 0.0,
-                                1.0, 0.0, 0.0,
-                                -1.0, 0.0, 0.0 };
-    GLshort rectangle_indicies[] = {
-                                0, 1, 2, //0,
-                                2, 1, 3, //0,
-                                2, 3, 4, //1,
-                                4, 3, 5, //1,
-                                4, 5, 6, //2,
-                                6, 5, 7, //2,
-                                6, 7, 0, //3,
-                                0, 7, 1, //3,
-                                1, 7, 3, //4,
-                                3, 7, 5, //4,
-                                6, 0, 4, //5,
-                                4, 0, 2};//, //5 };
-
-    // END TRIANGLE
     
     // Create geometry (from file)
     GLfloat *vp_plane = NULL;  // array of vertex points
