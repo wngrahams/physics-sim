@@ -26,7 +26,7 @@
 
 #define NUM_SHADER_PROGRAMS 3
 
-#define CAM_START_POS 0.0f, 0.0f, 8.0f
+#define CAM_START_POS 0.0f, 8.0f, 8.0f
 
 int main(int argv, char** argc) {
 
@@ -366,22 +366,93 @@ int main(int argv, char** argc) {
         // bind VAO:
         glBindVertexArray(vao);
 
-        /*
-        vp_cube[5] = sinf(current_seconds);
-        vp_cube[7] = sinf(current_seconds);
-        vp_cube[10] = sinf(current_seconds);
-        vp_cube[26] = sinf(current_seconds);
-        vp_cube[27] = sinf(current_seconds);
-        */
+        // point 5
+        vp_cube[15] += 0.001;
+        vp_cube[16] += 0.001;
+        vp_cube[17] += 0.001;
+
+        //v1 = p3 - p5, v2 = p4 - p5
+        vec3 p5 = vec3(vp_cube[15], vp_cube[16], vp_cube[17]);
+        vec3 p4 = vec3(vp_cube[12], vp_cube[13], vp_cube[14]);
+        vec3 p3 = vec3(vp_cube[9], vp_cube[10], vp_cube[11]);
+        vec3 v1 = p3 - p5;
+        vec3 v2 = p4 - p5;
+        vec3 n = normalise(cross(v1, v2));
+        vn_cube[15] = n.v[0];
+        vn_cube[16] = n.v[1];
+        vn_cube[17] = n.v[2];
+
+        // point 7
+        vp_cube[21] += 0.001;
+        vp_cube[22] += 0.001;
+        vp_cube[23] += 0.001;
+
+        //v1 = p3 - p5, v2 = p4 - p5
+        vec3 p7 = vec3(vp_cube[21], vp_cube[22], vp_cube[23]);
+        vec3 p6 = vec3(vp_cube[18], vp_cube[19], vp_cube[20]);
+        vec3 p8 = vec3(vp_cube[24], vp_cube[25], vp_cube[26]);
+        v1 = p8 - p7;
+        v2 = p6 - p7;
+        n = normalise(cross(v1, v2));
+        vn_cube[21] = n.v[0];
+        vn_cube[22] = n.v[1];
+        vn_cube[23] = n.v[2];
+
+        // point 10
+        vp_cube[30] += 0.001;
+        vp_cube[31] += 0.001;
+        vp_cube[32] += 0.001;
+
+        vec3 p10 = vec3(vp_cube[30], vp_cube[31], vp_cube[32]);
+        vec3 p9  = vec3(vp_cube[27], vp_cube[28], vp_cube[29]);
+        vec3 p11 = vec3(vp_cube[33], vp_cube[34], vp_cube[35]);
+        v1 = p9 - p10;
+        v2 = p11 - p10;
+        n = normalise(cross(v1, v2));
+        vn_cube[30] = n.v[0];
+        vn_cube[31] = n.v[1];
+        vn_cube[32] = n.v[2];
+
+        // point 26
+        vp_cube[78] += 0.001;
+        vp_cube[79] += 0.001;
+        vp_cube[80] += 0.001;
+
+        vec3 p26 = vec3(vp_cube[78], vp_cube[79], vp_cube[80]);
+        vec3 p24 = vec3(vp_cube[72], vp_cube[73], vp_cube[74]);
+        vec3 p25 = vec3(vp_cube[75], vp_cube[76], vp_cube[77]);
+        v1 = p24 - p26;
+        v2 = p25 - p26;
+        n = normalise(cross(v1, v2));
+        vn_cube[78] = n.v[0];
+        vn_cube[79] = n.v[1];
+        vn_cube[80] = n.v[2];
+
+        // poin 27
+        vp_cube[81] += 0.001;
+        vp_cube[82] += 0.001;
+        vp_cube[83] += 0.001;
+
+        vec3 p27 = vec3(vp_cube[81], vp_cube[82], vp_cube[83]);
+        vec3 p28 = vec3(vp_cube[84], vp_cube[85], vp_cube[86]);
+        vec3 p29 = vec3(vp_cube[87], vp_cube[88], vp_cube[89]);
+        v1 = p28 - p27;
+        v2 = p29 - p27;
+        n = normalise(cross(v1, v2));
+        vn_cube[81] = n.v[0];
+        vn_cube[82] = n.v[1];
+        vn_cube[83] = n.v[2];
+
+        
         //printf("
 
-        /*
+        
         glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube);
         glBufferData(GL_ARRAY_BUFFER, 
                     3*point_count_cube*sizeof(GLfloat), 
                     vp_cube,
                     GL_DYNAMIC_DRAW);
-                    */
+                    
 
 
 
