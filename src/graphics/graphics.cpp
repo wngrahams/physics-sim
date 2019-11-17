@@ -19,14 +19,14 @@
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define CUBE_FILE "cube.obj"
-#define PLANE_FILE "plane.obj"
+#define CUBE_FILE "../../res/cube.obj"
+#define PLANE_FILE "../../res/plane.obj"
 #define NUM_CUBES 4
 #define NUM_PLANES 2
 
 #define NUM_SHADER_PROGRAMS 3
 
-#define CAM_START_POS 0.0f, 8.0f, 8.0f
+#define CAM_START_POS 0.0f, -8.0f, 8.0f
 
 int main(int argv, char** argc) {
 
