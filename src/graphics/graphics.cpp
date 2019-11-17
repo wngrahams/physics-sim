@@ -24,22 +24,27 @@
 #define NUM_CUBES 4
 #define NUM_PLANES 2
 
-#define NUM_SHADER_PROGRAMS 2
+#define NUM_SHADER_PROGRAMS 3
 
-#define CAM_START_POS 0.0f, -8.0f, 5.0f
+#define CAM_START_POS 0.0f, -12.0f, 8.0f
 
 int main(int argv, char** argc) {
 
-    GLuint points_vbo_tri, points_vbo_plane, normals_vbo_tri, normals_vbo_plane;
+    GLuint points_vbo_plane, normals_vbo_plane;
+    GLuint points_vbo_cube, normals_vbo_cube;
     GLuint vao;
-	GLuint vs, fs, shader_program, fs_black, shader_program_black;
-    GLuint vs_ground, fs_ground, vs_grid, fs_grid;
-    GLuint *shaders, *shaders_black, *programs;
-    GLuint *shaders_grid, *shaders_ground;
-    GLuint shader_program_grid, shader_program_ground;
+    GLuint vs_ground, fs_ground;
+    GLuint vs_grid, fs_grid;
+    GLuint vs_cube, fs_cube;
+    GLuint shader_program_ground, shader_program_grid, shader_program_cube;
+    GLuint *shaders_ground, *shaders_grid, *shaders_cube;
+    GLuint *programs;
 	
-    int model_mat_location_ground, view_mat_location_ground, proj_mat_location_ground;
+    int model_mat_location_ground, 
+        view_mat_location_ground, 
+        proj_mat_location_ground;
     int model_mat_location_grid, view_mat_location_grid, proj_mat_location_grid;
+    int model_mat_location_cube, view_mat_location_cube, proj_mat_location_cube;
 
     // camera vars:
     float aspect;
@@ -55,19 +60,24 @@ int main(int argv, char** argc) {
     mat4 proj_mat, view_mat, T, R;
     vec3 cam_pos(CAM_START_POS);
 
-    // a world position for each sphere in the scene
-    vec3 sphere_pos_wor[] = { vec3( 0.0, 0.0, 0.005 ),
-                              vec3( 2.0, 0.0, 0.0 ),
-							  vec3( -2.0, 0.0, -2.0 ), 
-                              vec3( 1.5, 1.0, -1.0 ) };
+    // a world position for each cube in the scene
+    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 5.005 ),
+                              vec3( 2.0, 0.0, 3.0 ),
+							  vec3( -2.0, 0.0, 2.0 ), 
+                              vec3( 1.5, 1.0, 1.0 ) };
     // world position for each plane
     vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.005) };
     
     // Create geometry (from file)
-    GLfloat *vp = NULL;  // array of vertex points
-	GLfloat *vn = NULL;  // array of vertex normals
-	GLfloat *vt = NULL;  // array of texture coordinates
-	int point_count = 0;
+    GLfloat *vp_plane = NULL;  // array of vertex points
+    GLfloat *vn_plane = NULL;  // array of vertex normals
+    GLfloat *vt_plane = NULL;  // array of texture coordinates
+	int point_count_plane = 0;
+
+    GLfloat *vp_cube = NULL;
+    GLfloat *vn_cube = NULL;
+    GLfloat *vt_cube = NULL;
+    int point_count_cube = 0;
 	
     // restart log file:
     restart_gl_log();
@@ -79,7 +89,8 @@ int main(int argv, char** argc) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    load_obj_file(PLANE_FILE, vp, vt, vn, point_count);
+    load_obj_file(PLANE_FILE, vp_plane, vt_plane, vn_plane, point_count_plane);
+    load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube );
 
     /* 
     // print all points for debugging
@@ -96,63 +107,50 @@ int main(int argv, char** argc) {
     }
     */
 
-
-    GLfloat points[] = { -5.0f,  5.0f, 0.0f, 
-                         -5.0f, -5.0f, 0.0f, 
-                          5.0f,  5.0f, 0.0f,
-                          5.0f,  5.0f, 0.0f,
-                         -5.0f, -5.0f, 0.0f,
-                          5.0f, -5.0f, 0.0f };
-    float normals[] = {
-		0.0f, 0.0f, 1.0f, 
-        0.0f, 0.0f, 1.0f, 
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 
-        0.0f, 0.0f, 1.0f, 
-        0.0f, 0.0f, 1.0f
-	};
-
-    //GLuint points_vbo;
-	glGenBuffers( 1, &points_vbo_tri );
-	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
-	glBufferData( GL_ARRAY_BUFFER, 18 * sizeof( GLfloat ), points, GL_STATIC_DRAW );
-
-	//GLuint normals_vbo;
-	glGenBuffers( 1, &normals_vbo_tri );
-	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo_tri );
-	glBufferData( GL_ARRAY_BUFFER, 18 * sizeof( GLfloat ), normals, GL_STATIC_DRAW );
-
 	//GLuint vao;
-	glGenVertexArrays( 1, &vao );
-	glBindVertexArray( vao );
-	glBindBuffer( GL_ARRAY_BUFFER, points_vbo_tri );
-	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, NULL );
-	glBindBuffer( GL_ARRAY_BUFFER, normals_vbo_tri );
-	glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, NULL );
-	glEnableVertexAttribArray( 0 );
-	glEnableVertexAttribArray( 1 );
-    
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
     // load points into GPU using Vertex Buffer Object (vbo):
-    if (NULL != vp) {
+    if (NULL != vp_plane) {
 		glGenBuffers(1 , &points_vbo_plane);
 		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_plane);
 		glBufferData(GL_ARRAY_BUFFER, 
-                     3*point_count*sizeof(GLfloat), 
-                     vp,
+                     3*point_count_plane*sizeof(GLfloat), 
+                     vp_plane,
 					 GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 		glEnableVertexAttribArray(0);
 	} 
-    if (NULL != vn) {
+    if (NULL != vn_plane) {
         glGenBuffers(1, &normals_vbo_plane);
         glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_plane);
         glBufferData(GL_ARRAY_BUFFER, 
-                     3*point_count*sizeof(GLfloat),
-                     vn,
+                     3*point_count_plane*sizeof(GLfloat),
+                     vn_plane,
                      GL_STATIC_DRAW);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glEnableVertexAttribArray(1);
+    }
+    if (NULL != vp_cube) {
+        glGenBuffers(1 , &points_vbo_cube);
+		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube);
+		glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count_cube*sizeof(GLfloat), 
+                     vp_cube,
+					 GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(2);
+	} 
+    if (NULL != vn_cube) {
+        glGenBuffers(1, &normals_vbo_cube);
+        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube);
+        glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count_cube*sizeof(GLfloat),
+                     vn_cube,
+                     GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(3);
     }
 
     // get shaders from files, compile, and link:
@@ -160,6 +158,9 @@ int main(int argv, char** argc) {
     vs_grid = compile_shader("grid_vs.glsl", GL_VERTEX_SHADER);
     fs_ground = compile_shader("ground_fs.glsl", GL_FRAGMENT_SHADER);
     fs_grid = compile_shader("grid_fs.glsl", GL_FRAGMENT_SHADER);
+    vs_cube = compile_shader("cube_vs.glsl", GL_VERTEX_SHADER);
+    fs_cube = compile_shader("cube_fs.glsl", GL_FRAGMENT_SHADER);
+
     shaders_ground = new GLuint[2];
     shaders_ground[0] = vs_ground;
     shaders_ground[1] = fs_ground;
@@ -171,25 +172,49 @@ int main(int argv, char** argc) {
     shaders_grid[1] = fs_grid;
     shader_program_grid = link_shaders(shaders_grid, 2);
     assert(program_is_valid(shader_program_grid));
+
+    shaders_cube = new GLuint[2];
+    shaders_cube[0] = vs_cube;
+    shaders_cube[1] = fs_cube;
+    shader_program_cube = link_shaders(shaders_cube, 2);
+    assert(program_is_valid(shader_program_cube));
+
     programs = new GLuint[NUM_SHADER_PROGRAMS];
     programs[0] = shader_program_ground;
     programs[1] = shader_program_grid;
+    programs[2] = shader_program_cube;
 
     // get Uniform variable locations from shaders:
-    model_mat_location_ground = glGetUniformLocation(shader_program_ground, "model");
-    view_mat_location_ground  = glGetUniformLocation(shader_program_ground, "view");
-    proj_mat_location_ground  = glGetUniformLocation(shader_program_ground, "proj");
-    model_mat_location_grid   = glGetUniformLocation(shader_program_grid, "model");
-    view_mat_location_grid    = glGetUniformLocation(shader_program_grid, "view");
-    proj_mat_location_grid    = glGetUniformLocation(shader_program_grid, "proj");
+    model_mat_location_ground = glGetUniformLocation(shader_program_ground, 
+                                                     "model");
+    view_mat_location_ground  = glGetUniformLocation(shader_program_ground, 
+                                                     "view");
+    proj_mat_location_ground  = glGetUniformLocation(shader_program_ground, 
+                                                     "proj");
+    model_mat_location_grid   = glGetUniformLocation(shader_program_grid, 
+                                                     "model");
+    view_mat_location_grid    = glGetUniformLocation(shader_program_grid,
+                                                     "view");
+    proj_mat_location_grid    = glGetUniformLocation(shader_program_grid,
+                                                     "proj");
+    model_mat_location_cube   = glGetUniformLocation(shader_program_cube, 
+                                                     "model");
+    view_mat_location_cube    = glGetUniformLocation(shader_program_cube, 
+                                                     "view");
+    proj_mat_location_cube    = glGetUniformLocation(shader_program_cube, 
+                                                     "proj");
+    
 
     // free unneeded memory used when making shaders:
     glDeleteShader(vs_ground);
     glDeleteShader(fs_ground);
     glDeleteShader(vs_grid);
     glDeleteShader(fs_grid);
+    glDeleteShader(vs_cube);
+    glDeleteShader(fs_cube);
     delete shaders_ground;  
     delete shaders_grid;
+    delete shaders_cube;
 
     /* --- CAMERA SETUP --- */
     aspect = (float)g_gl_width / (float)g_gl_height; // aspect ratio
@@ -219,18 +244,25 @@ int main(int argv, char** argc) {
     glUniformMatrix4fv(view_mat_location_grid, 1, GL_FALSE, view_mat.m);
     glUniformMatrix4fv(proj_mat_location_grid, 1, GL_FALSE, proj_mat.m);
 
+    glUseProgram(shader_program_cube);
+    glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
+    glUniformMatrix4fv(proj_mat_location_cube, 1, GL_FALSE, proj_mat.m);
+
 	// unique model matrix for each plane
-    
 	mat4 model_mats_plane[NUM_PLANES];
 	for (int i=0; i<NUM_PLANES; i++) {
 		model_mats_plane[i] = translate(identity_mat4(), plane_pos_wor[i]);
 	}
-    //mat4 model_mat_tri = identity_mat4();
+    // unique model matrix for each cube
+    mat4 model_mats_cube[NUM_CUBES];
+    for (int i=0; i<NUM_CUBES; i++) {
+        model_mats_cube[i] = translate(identity_mat4(), cube_pos_wor[i]);
+    }
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
-	glEnable(GL_CULL_FACE);	  // enable face culling
-	glCullFace(GL_BACK);	  // cull back face
+	//glEnable(GL_CULL_FACE);	  // enable face culling
+	//glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
     /* --- END RENDER SETTINGS --- */
@@ -258,7 +290,7 @@ int main(int argv, char** argc) {
                            GL_FALSE,
                            model_mats_plane[0].m
                           );
-        glDrawArrays(GL_LINE_LOOP, 0, point_count);
+        glDrawArrays(GL_TRIANGLES, 0, point_count_plane);
 
         // draw grid:
         glUseProgram(shader_program_grid);
@@ -267,7 +299,18 @@ int main(int argv, char** argc) {
                            GL_FALSE,
                            model_mats_plane[1].m
                           );
-        glDrawArrays(GL_LINE_LOOP, 0, point_count);
+        glDrawArrays(GL_LINE_LOOP, 0, point_count_plane);
+
+        glUseProgram(shader_program_cube);
+        // draw each cube:
+        for (int i=0; i<NUM_CUBES; i++) {
+            glUniformMatrix4fv(model_mat_location_cube,
+                              1,
+                              GL_FALSE,
+                              model_mats_cube[i].m
+                              );
+            glDrawArrays(GL_TRIANGLES, 0, point_count_cube);
+        }
 
         /*
         // set shader program:
@@ -430,6 +473,8 @@ int main(int argv, char** argc) {
 			glUniformMatrix4fv(view_mat_location_ground, 1, GL_FALSE, view_mat.m);
             glUseProgram(shader_program_grid);
             glUniformMatrix4fv(view_mat_location_grid, 1, GL_FALSE, view_mat.m);
+            glUseProgram(shader_program_cube);
+            glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
 		}
 
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {
@@ -441,11 +486,11 @@ int main(int argv, char** argc) {
     } /* --- END RENDER LOOP --- */
 
     /* --- CLEAN UP --- */
-    // close GL context and GLFW resources:
-    //glDeleteBuffers(1, &points_vbo_tri);
-    //glDeleteBuffers(1, &normals_vbo_tri);
+    // close GL context and GLFW resources: 
     glDeleteBuffers(1, &points_vbo_plane);
     glDeleteBuffers(1, &normals_vbo_plane);
+    glDeleteBuffers(1, &points_vbo_cube);
+    glDeleteBuffers(1, &normals_vbo_cube);
     glDeleteVertexArrays(1, &vao);
     for (int i=0; i<NUM_SHADER_PROGRAMS; i++) {
         glDeleteProgram(programs[i]);
@@ -453,9 +498,13 @@ int main(int argv, char** argc) {
     delete programs;
     glfwTerminate();
 
-    delete vn;
-    delete vp;
-    delete vt;
+    delete vn_plane;
+    delete vp_plane;
+    delete vt_plane;
+    delete vn_cube;
+    delete vp_cube;
+    delete vt_cube;
+
     /* --- END CLEAN UP --- */
 
     return 0;

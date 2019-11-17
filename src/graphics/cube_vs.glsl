@@ -1,7 +1,7 @@
 #version 410
 
-layout(location = 0) in vec3 vertex_pos;
-layout(location = 1) in vec3 vertex_norm;
+layout(location = 2) in vec3 vertex_pos;
+layout(location = 3) in vec3 vertex_norm;
 
 uniform mat4 model, view, proj;
 
