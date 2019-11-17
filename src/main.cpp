@@ -1,16 +1,19 @@
 #include <iostream>
-#include <iomanip>
+#include <fstream>
 #include "main.hpp"
 
 using namespace std;
 
-int iteration = 0;
 int main() {
 
+    ofstream energy_file;
+    energy_file.open(ENERGY_TXT);
+
     double T = 0.0;
-    cout << setprecision(10);
     vector<Mass> mass;
     vector<Spring> spring;
+    vector<double> kinetic_energy;
+    vector<double> potential_energy;
 
     // create initial cube
     initialize_cube(mass, spring);
@@ -23,28 +26,11 @@ int main() {
 //        cout << mass[i].p[2] << "\t\n";
 //    }
 
-//    cout << T << "\n";
-//    cout << mass[0].p[0] << ", " << mass[0].p[1] << ", " << mass[0].p[2] << "\n";
-//    cout << mass[0].v[0] << ", " << mass[0].v[1] << ", " << mass[0].v[2] << "\n";
-//    cout << mass[0].a[0] << ", " << mass[0].a[1] << ", " << mass[0].a[2] << "\n";
-//    cout << calculate_energy(mass, spring) << "\n\n";
-
-//    for (int i = 0; i < NUM_OF_SPRINGS; i++) {
-//        cout << mass[spring[i].m1].p[0] << "," << mass[spring[i].m1].p[1]<< "," << mass[spring[i].m1].p[2]<< " | ";
-//        cout << mass[spring[i].m2].p[0] << "," << mass[spring[i].m2].p[1] << "," << mass[spring[i].m2].p[2] << "\n";
-//    }
-
-
     // simulation loop
-    for (iteration = 0; iteration < NUM_OF_ITERATIONS; iteration++) {
-        cout << "T: " << T << "\n";
-
+    for (int iteration = 0; iteration < NUM_OF_ITERATIONS; iteration++) {
         // initialize force vector
-        vector<vector<double>> force;
-        for (int i = 0; i < NUM_OF_MASSES; i++) {
-            force.emplace_back();
-            force[i] = {0.0, 0.0, 0.0};
-        }
+        vector<vector<double>> force(NUM_OF_MASSES, vector<double>(DIMENSIONS));
+
         // calculate force on each spring
         calculate_force(mass, spring, force);
 //        add_external_force(mass, spring, force);
@@ -54,19 +40,42 @@ int main() {
         update_position(mass, spring, force);
         cout << "\n\n";
         // calculate energy
-        double total_energy = calculate_energy(mass, spring);
+        kinetic_energy.emplace_back(calculate_kinetic_energy(mass, spring));
+        potential_energy.emplace_back(calculate_potential_energy(mass, spring));
 
-//        cout << "T: " << T << "\n";
-        for (int i = 0; i < NUM_OF_MASSES; i++) {
-            print_mass(mass, i);
-        }
-        cout << "e: " << total_energy << "\n\n\n";
+        cout << "T: " << T << "\n";
+//        for (int i = 0; i < NUM_OF_MASSES; i++) {
+//            print_mass(mass, 0);
+//        }
+        cout << "e: " << kinetic_energy[iteration] + potential_energy[iteration] << "\n\n\n";
 
         // update time
         T += DT;
     }
 
+    // write energy to file
+    for (int i = 0; i < kinetic_energy.size(); i++) {
+        energy_file << kinetic_energy[i];
+        if (i + 1 < kinetic_energy.size()) {
+            energy_file << ",";
+        }
+    }
+    energy_file << "\n";
+    for (int i = 0; i < potential_energy.size(); i++) {
+        energy_file << potential_energy[i];
+        if (i + 1 < potential_energy.size()) {
+            energy_file << ",";
+        }
+    }
+    energy_file << "\n";
+    for (int i = 0; i < potential_energy.size(); i++) {
+        energy_file << kinetic_energy[i] + potential_energy[i];
+        if (i + 1 < potential_energy.size()) {
+            energy_file << ",";
+        }
+    }
 
+    energy_file.close();
 }
 
 void initialize_cube(vector<Mass> &mass, vector<Spring> &spring) {
@@ -124,7 +133,7 @@ void initialize_cube(vector<Mass> &mass, vector<Spring> &spring) {
 }
 
 double dist(vector<double> a, vector<double> b) {
-    return sqrt(pow(b[0]-a[0],2.0) + pow(b[1]-a[1],2.0) + pow(b[2]-a[2],2.0));
+    return sqrt(pow(b[0]-a[0],2) + pow(b[1]-a[1],2) + pow(b[2]-a[2],2));
 }
 
 void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<double>> &force) {
@@ -146,17 +155,17 @@ void calculate_force(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
                                       forceNormalized * (mass[spring[i].m2].p[2] - mass[spring[i].m1].p[2]) / length};
 
         // now update force vector for masses that spring touches
-        force[spring[i].m1][0] -= forceVector[0];
-        force[spring[i].m1][1] -= forceVector[1];
-        force[spring[i].m1][2] -= forceVector[2];
-        force[spring[i].m2][0] += forceVector[0];
-        force[spring[i].m2][1] += forceVector[1];
-        force[spring[i].m2][2] += forceVector[2];
+        force[spring[i].m1][0] += forceVector[0];
+        force[spring[i].m1][1] += forceVector[1];
+        force[spring[i].m1][2] += forceVector[2];
+        force[spring[i].m2][0] -= forceVector[0];
+        force[spring[i].m2][1] -= forceVector[1];
+        force[spring[i].m2][2] -= forceVector[2];
     }
 
     // force due to gravity
     for (int i = 0; i < NUM_OF_MASSES; i++) {
-        force[i][2] += mass[i].m * G; // note: gravity constant is negative
+        force[i][2] -= mass[i].m * G; // note: acceleration due to gravity is defined as negative
     }
 
 }
@@ -186,28 +195,37 @@ void update_position(vector<Mass> &mass, vector<Spring> &spring, vector<vector<d
     }
 }
 
-double calculate_energy(vector<Mass> &mass, vector<Spring> &spring) {
-    double total_energy = 0.0;
+double calculate_potential_energy(vector<Mass> &mass, vector<Spring> &spring) {
+    double ground_potential_energy = 0.0;
+    double gravity_potential_energy = 0.0;
+    double spring_potential_energy = 0.0;
 
     for (int i = 0; i < NUM_OF_MASSES; i++) {
-        double m = mass[i].m;
-        // kinetic energy
-        total_energy += 0.5 * m * pow(dist(mass[i].v, {0, 0, 0}), 2);
         // potential energy due to gravity
-        total_energy += m * abs(G) * mass[i].p[2];
-
+        gravity_potential_energy += mass[i].m * abs(G) * mass[i].p[2];
         // energy due to ground
         if (mass[i].p[2] < 0) {
-            total_energy += 0.5 * K_GROUND * pow(mass[i].p[2], 2); // maybe change to just a reverse kinetic energy
+            ground_potential_energy += 0.5 * K_GROUND * pow(mass[i].p[2], 2); // maybe change to just a reverse kinetic energy
         }
     }
 
+    // potential energy due to springs
     for (int i = 0; i < NUM_OF_SPRINGS; i++) {
-        // potential energy due to springs
-        total_energy += 0.5 * K_SPRING * pow(spring[i].l0 - dist(mass[spring[i].m1].p, mass[spring[i].m2].p), 2);
+        spring_potential_energy += 0.5 * K_SPRING * pow(spring[i].l0 - dist(mass[spring[i].m2].p, mass[spring[i].m1].p), 2);
     }
 
-    return total_energy;
+    return gravity_potential_energy + ground_potential_energy + spring_potential_energy;
+}
+
+double calculate_kinetic_energy(vector<Mass> &mass, vector<Spring> &spring) {
+    double kinetic_energy = 0.0;
+
+    for (int i = 0; i < NUM_OF_MASSES; i++) {
+        // kinetic energy
+        kinetic_energy += 0.5 * mass[i].m * pow(dist(mass[i].v, {0, 0, 0}), 2);
+    }
+
+    return kinetic_energy;
 }
 
 void print_mass (vector<Mass> &mass, int i) {
