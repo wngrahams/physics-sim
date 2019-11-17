@@ -34,8 +34,8 @@
 *.i*86
 *.x86_64
 *.hex
-graphics
 test
+./src/graphics/graphics
 
 # Debug files
 *.dSYM/
