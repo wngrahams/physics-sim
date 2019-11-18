@@ -13,8 +13,8 @@
 #define CLIPPING_NEAR     (0.1f)
 #define CLIPPING_FAR      (1000.0f)
 #define FOV_Y             (67.0f)
-#define CAM_SPEED         (10000.0f)    // 5 = 1 unit per second
-#define CAM_HEADING_SPEED (80000.0f)  // 100 = 30 degrees per second
+#define CAM_SPEED         (5.0f)    // 5 = 1 unit per second
+#define CAM_HEADING_SPEED (100.0f)  // 100 = 30 degrees per second
 
 class Camera {
    
