@@ -8,7 +8,7 @@ uniform mat4 view_mat;
 vec3 light_position_world  = vec3 (0.0, 0.0, 2.0);
 vec3 Ls = vec3 (1.0, 1.0, 1.0); // white specular colour
 vec3 Ld = vec3 (0.7, 0.7, 0.7); // dull white diffuse light colour
-vec3 La = vec3 (1.0, 0.5, 0.0); // orange ambient colour
+vec3 La = vec3 (0.3, 0.3, 0.3); // gray ambient colour
   
 // surface reflectance
 vec3 Ks = vec3 (1.0, 1.0, 1.0); // fully reflect specular light
