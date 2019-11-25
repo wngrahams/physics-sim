@@ -9,9 +9,11 @@
  */
 
 #include <assert.h>
+#include <cstring>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "gl-utils.h"
 #include "camera.hpp"
@@ -21,14 +23,16 @@
 
 #define CUBE_FILE "../../res/cube.obj"
 #define PLANE_FILE "../../res/plane.obj"
-#define NUM_CUBES 4
+//#define NUM_CUBES 4
 #define NUM_PLANES 2
 
 #define NUM_SHADER_PROGRAMS 3
 
-#define CAM_START_POS 0.0f, -3.0f, 3.0f
+#define CAM_START_POS -0.1f, -0.2f, 2.5f
 
 int main(int argv, char** argc) {
+
+    int NUM_CUBES = 1;
 
     GLuint points_vbo_plane, normals_vbo_plane;
     GLuint points_vbo_cube, normals_vbo_cube;
@@ -61,10 +65,17 @@ int main(int argv, char** argc) {
     vec3 cam_pos(CAM_START_POS);
 
     // a world position for each cube in the scene
-    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 5.005 ),
-                              vec3( 2.0, 0.0, 3.0 ),
-							  vec3( -2.0, 0.0, 2.0 ), 
-                              vec3( 1.5, 1.0, 1.0 ) };
+    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 0.0 ),
+                              vec3( 1.0, 1.0, 0.0 ),
+							  vec3( -1.0, -1.0, 0.0 ), 
+                              vec3( 1.0, -1.0, 0.0 ), 
+                              vec3( -1.0, 1.0, 0.0),
+                              vec3(1.0, 0.0, 0.0),
+                              vec3(-1.0, 0.0, 0.0),
+                              vec3(0.0, 1.0, 0.0),
+                              vec3(0.0, -1.0, 0.0),
+                              vec3(-0.5, 0.5, 0.0)
+    };
     // world position for each plane
     vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.002) };
 
@@ -92,7 +103,47 @@ int main(int argv, char** argc) {
 
     load_obj_file(PLANE_FILE, vp_plane, vt_plane, vn_plane, point_count_plane);
     load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube );
+    
+    /* TRIANGLE FOR TESTING
+    GLfloat vp_cube[] = { 0.0, 0.0, 0.0,
+                          0.1, 0.0, 0.0,
+                          0.1, 0.0, 0.1 };
+    GLfloat vn_cube[] = { 0.0, -1.0, 0.0,
+                          0.0, -1.0, 0.0,
+                          0.0, -1.0, 0.0 };
+    point_count_cube = 3; */
 
+    // read bouncing/breathing data from file:
+    FILE *fp = fopen("../spin.txt", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "could not open bounce file");
+        return 1;
+    }
+    // get number of iterations:
+    int num_iterations = 0;
+    char line[4096];
+    while (fgets(line, sizeof(line), fp)) {
+        num_iterations++;
+    }
+    // load the poins into an array
+    float* progression = new float[num_iterations * point_count_cube * 3];
+    int prog_size = num_iterations * point_count_cube * 3;
+    fseek(fp, 0L, SEEK_SET);
+    char* tok;
+    int counter = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        //printf("%s\n", line);
+        tok = strtok(line, ",");
+        while (NULL != tok) {
+            progression[counter++] = atof(tok);
+            tok = strtok(NULL, ",");
+        }
+    }
+
+    /*
+    for (int i=0; i<prog_size; i++) {
+        printf("%f\n", progression[i]);
+    }*/
      
     // print all points for debugging
     for (int i=0; i<point_count_cube*3; i+=3) {
@@ -280,18 +331,19 @@ int main(int argv, char** argc) {
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
-	glEnable(GL_CULL_FACE);	  // enable face culling
-	glCullFace(GL_BACK);	  // cull back face
+	//glEnable(GL_CULL_FACE);	  // enable face culling
+	//glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
     /* --- END RENDER SETTINGS --- */
 
     /* --- RENDER LOOP --- */
     // continually draw until window is closed 
+    int prog_counter = 0;
     while (!glfwWindowShouldClose(g_window)) {
 
         // timer for doing animation:
-        double previous_seconds = glfwGetTime();
+        static double previous_seconds = glfwGetTime();
         double current_seconds = glfwGetTime();
         double elapsed_seconds = current_seconds - previous_seconds;
         previous_seconds = current_seconds;
@@ -334,6 +386,15 @@ int main(int argv, char** argc) {
         // bind VAO:
         glBindVertexArray(vao);
 
+        
+        if (prog_counter + (3*point_count_cube) < prog_size) {
+            for (int i=0; i<(3*point_count_cube); i++) {
+                vp_cube[i] = progression[prog_counter++];
+                //printf("%f\n", progression[i]);
+            }
+        }
+
+        /*
         // point 5
         vp_cube[15] += 0.001;
         vp_cube[16] += 0.001;
@@ -410,7 +471,7 @@ int main(int argv, char** argc) {
         vn_cube[81] = n.v[0];
         vn_cube[82] = n.v[1];
         vn_cube[83] = n.v[2];
-
+        */
         
         //printf("
 
@@ -441,7 +502,7 @@ int main(int argv, char** argc) {
 			move.v[IDX_RT] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
-		if ( glfwGetKey(g_window, GLFW_KEY_Q)) {
+		if (glfwGetKey(g_window, GLFW_KEY_Q)) {
 			move.v[IDX_UP] += CAM_SPEED * elapsed_seconds;
 			cam_moved = true;
 		}
@@ -587,10 +648,11 @@ int main(int argv, char** argc) {
     delete vn_plane;
     delete vp_plane;
     delete vt_plane;
-    delete vn_cube;
-    delete vp_cube;
+    //delete vn_cube;
+    //delete vp_cube;
     delete vt_cube;
 
+    delete [] progression;
     /* --- END CLEAN UP --- */
 
     return 0;

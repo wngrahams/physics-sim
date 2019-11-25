@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "gl-utils.h"
 #include "camera.hpp"
@@ -27,7 +28,7 @@
 int main(int argv, char** argc) {
 //void graphics_init(const int num_cubes, const float* starting_positions) {
 
-    int num_cubes = 2;
+    int num_cubes = 1;
 
     /* ----------- VARIABLES ---------- */
     // vao vars:
@@ -124,6 +125,32 @@ int main(int argv, char** argc) {
             vn_cubes[i][j] = vn_cube[j];
         }
     }
+/*
+    // read bouncing/breathing data from file:
+    FILE *fp = fopen("../bounce.txt", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "could not open bounce file");
+        return 1;
+    }
+    // get number of iterations:
+    int num_iterations = 0;
+    char line[4096];
+    while (fgets(line, sizeof(line), fp)) {
+        num_iterations++;
+    }
+    // load the poins into an array
+    float* progression = new float[num_iterations * 36 * 3 * sizeof(float)];
+    fseek(fp, 0L, SEEK_SET);
+    char* tok;
+    int counter = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        tok = strtok(line, ",");
+        while (NULL != tok) {
+            progression[counter++] = atof(tok);
+            tok = strtok(line, ",");
+        }
+    }*/
+
     /* ---------- END SETUP AND LOAD ---------- */
 
     /* ---------- VAO & VBO ---------- */
@@ -603,4 +630,5 @@ int main(int argv, char** argc) {
 
     delete [] vp_cubes;
     delete [] vn_cubes;
+    //delete [] progression;
 }
