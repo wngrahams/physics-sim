@@ -125,7 +125,7 @@ int main(int argv, char** argc) {
     while (fgets(line, sizeof(line), fp)) {
         num_iterations++;
     }
-    // load the poins into an array
+    // load the points into an array
     float* progression = new float[num_iterations * point_count_cube * 3];
     int prog_size = num_iterations * point_count_cube * 3;
     fseek(fp, 0L, SEEK_SET);
@@ -349,7 +349,7 @@ int main(int argv, char** argc) {
         previous_seconds = current_seconds;
 
         // update fps counter:
-        update_fps_counter(g_window);
+        //update_fps_counter(g_window);
 
         // clear drawing surface:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -392,7 +392,25 @@ int main(int argv, char** argc) {
                 vp_cube[i] = progression[prog_counter++];
                 //printf("%f\n", progression[i]);
             }
+
+            // update normals
+            for (int i=0; i<point_count_cube; i+=9) {
+                vec3 p1 = vec3(vp_cube[i+0], vp_cube[i+1], vp_cube[i+2]);
+                vec3 p2 = vec3(vp_cube[i+3], vp_cube[i+4], vp_cube[i+5]);
+                vec3 p3 = vec3(vp_cube[i+6], vp_cube[i+7], vp_cube[i+8]);
+
+                vec3 u = p2 - p1;
+                vec3 v = p3 - p1;
+                vec3 n = normalise(cross(u, v));
+
+                for (int j=0; j<3; j++) {
+                    vn_cube[i+0+(3*j)] = n.v[0];
+                    vn_cube[i+1+(3*j)] = n.v[1];
+                    vn_cube[i+2+(3*j)] = n.v[2];
+                }
+            }
         }
+        prog_counter+=(3*point_count_cube)*10;
 
         /*
         // point 5
@@ -481,6 +499,12 @@ int main(int argv, char** argc) {
                     3*point_count_cube*sizeof(GLfloat), 
                     vp_cube,
                     GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube);
+        glBufferData(GL_ARRAY_BUFFER, 
+                    3*point_count_cube*sizeof(GLfloat), 
+                    vn_cube,
+                    GL_DYNAMIC_DRAW);
+
                     
 
 
