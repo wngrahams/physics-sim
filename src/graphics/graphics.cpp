@@ -394,6 +394,8 @@ int main(int argv, char** argc) {
             }
 
             // update normals
+            calculate_normals_from_points(vp_cube, vn_cube, point_count_cube);
+            /*
             for (int i=0; i<point_count_cube; i+=9) {
                 vec3 p1 = vec3(vp_cube[i+0], vp_cube[i+1], vp_cube[i+2]);
                 vec3 p2 = vec3(vp_cube[i+3], vp_cube[i+4], vp_cube[i+5]);
@@ -408,9 +410,9 @@ int main(int argv, char** argc) {
                     vn_cube[i+1+(3*j)] = n.v[1];
                     vn_cube[i+2+(3*j)] = n.v[2];
                 }
-            }
+            }*/
         }
-        prog_counter+=(3*point_count_cube)*10;
+        prog_counter+=(3*point_count_cube)*9;
 
         /*
         // point 5
@@ -680,5 +682,27 @@ int main(int argv, char** argc) {
     /* --- END CLEAN UP --- */
 
     return 0;
+}
+
+/*
+ * Calculates normals for each point based on array of points only. Assumes
+ * arrays for each are already allocated
+ */
+void calculate_normals_from_points(GLfloat* vp, GLfloat* vn, int point_count) {
+    for (int i=0; i<point_count*3; i+=9) {
+        vec3 p1 = vec3(vp[i+0], vp[i+1], vp[i+2]);
+        vec3 p2 = vec3(vp[i+3], vp[i+4], vp[i+5]);
+        vec3 p3 = vec3(vp[i+6], vp[i+7], vp[i+8]);
+
+        vec3 u = p2 - p1;
+        vec3 v = p3 - p1;
+        vec3 n = normalise(cross(u, v));
+
+        for (int j=0; j<3; j++) {
+            vn[i+0+(3*j)] = n.v[0];
+            vn[i+1+(3*j)] = n.v[1];
+            vn[i+2+(3*j)] = n.v[2];
+        }
+    }
 }
 

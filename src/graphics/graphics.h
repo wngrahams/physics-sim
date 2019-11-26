@@ -17,5 +17,8 @@ int g_gl_width = 640;
 int g_gl_height = 480;
 GLFWwindow* g_window = NULL;
 
+// function definitions
+void calculate_normals_from_points(GLfloat*, GLfloat*, int);
+
 #endif
 
