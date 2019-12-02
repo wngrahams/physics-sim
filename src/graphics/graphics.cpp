@@ -26,7 +26,7 @@
 //#define NUM_CUBES 4
 #define NUM_PLANES 2
 
-#define NUM_SHADER_PROGRAMS 3
+#define NUM_SHADER_PROGRAMS 4
 
 #define CAM_START_POS 0.5f, -0.0f, 3.0f
 
@@ -34,16 +34,20 @@
 
 int main(int argv, char** argc) {
 
-    int NUM_CUBES = 1;
+    int NUM_CUBES = 2;
 
     GLuint points_vbo_plane, normals_vbo_plane;
     GLuint points_vbo_cube, normals_vbo_cube;
+    GLuint points_vbo_cube2, normals_vbo_cube2;
     GLuint vao;
     GLuint vs_ground, fs_ground;
     GLuint vs_grid, fs_grid;
     GLuint vs_cube, fs_cube;
+    GLuint vs_cube2, fs_cube2;
     GLuint shader_program_ground, shader_program_grid, shader_program_cube;
+    GLuint shader_program_cube2;
     GLuint *shaders_ground, *shaders_grid, *shaders_cube;
+    GLuint *shaders_cube2;
     GLuint *programs;
 	
     int model_mat_location_ground, 
@@ -51,6 +55,7 @@ int main(int argv, char** argc) {
         proj_mat_location_ground;
     int model_mat_location_grid, view_mat_location_grid, proj_mat_location_grid;
     int model_mat_location_cube, view_mat_location_cube, proj_mat_location_cube;
+    int model_mat_location_cube2, view_mat_location_cube2, proj_mat_location_cube2;
 
     // camera vars:
     float aspect;
@@ -67,8 +72,8 @@ int main(int argv, char** argc) {
     vec3 cam_pos(CAM_START_POS);
 
     // a world position for each cube in the scene
-    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 0.0 ),
-                              vec3( 1.0, 1.0, 0.0 ),
+    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.5, 0.0 ),
+                              vec3( 0.0, -0.5, 0.0 ),
 							  vec3( -1.0, -1.0, 0.0 ), 
                               vec3( 1.0, -1.0, 0.0 ), 
                               vec3( -1.0, 1.0, 0.0),
@@ -92,7 +97,12 @@ int main(int argv, char** argc) {
     GLfloat *vn_cube = NULL;
     GLfloat *vt_cube = NULL;
     int point_count_cube = 0;
-	
+
+    GLfloat *vp_cube2 = NULL;
+    GLfloat *vn_cube2 = NULL;
+    GLfloat *vt_cube2 = NULL;
+    int point_count_cube2 = 0;
+
     // restart log file:
     restart_gl_log();
 
@@ -104,7 +114,9 @@ int main(int argv, char** argc) {
     glDepthFunc(GL_LESS);
 
     load_obj_file(PLANE_FILE, vp_plane, vt_plane, vn_plane, point_count_plane);
-    load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube );
+    load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube);
+    // quick thing just to get it working by tonight
+    load_obj_file(CUBE_FILE, vp_cube2, vt_cube2, vn_cube2, point_count_cube2);
     
     /* TRIANGLE FOR TESTING
     GLfloat vp_cube[] = { 0.0, 0.0, 0.0,
@@ -142,12 +154,43 @@ int main(int argv, char** argc) {
         }
     }
 
+    // TODO: Delete/Consolidate later - this is just a copy of the above:
+    // read bouncing/breathing data from file:
+    FILE *fp2 = fopen("../3cubes_ga.txt", "r");
+    if (fp2 == NULL) {
+        fprintf(stderr, "could not open progession file 2");
+        return 1;
+    }
+    // get number of iterations:
+    int num_iterations2 = 0;
+    char line2[4096];
+    while (fgets(line2, sizeof(line2), fp2)) {
+        num_iterations2++;
+    }
+    // load the points into an array
+    float* progression2 = new float[num_iterations2 * point_count_cube2 * 3];
+    int prog_size2 = num_iterations2 * point_count_cube2 * 3;
+    fseek(fp2, 0L, SEEK_SET);
+    char* tok2;
+    int counter2 = 0;
+    while (fgets(line2, sizeof(line2), fp2)) {
+        //printf("%s\n", line);
+        tok2 = strtok(line2, ",");
+        while (NULL != tok2) {
+            progression2[counter2++] = atof(tok2);
+            tok2 = strtok(NULL, ",");
+        }
+    }
+    //END COPY
+
+
     /*
     for (int i=0; i<prog_size; i++) {
         printf("%f\n", progression[i]);
     }*/
      
     // print all points for debugging
+    /*
     for (int i=0; i<point_count_cube*3; i+=3) {
         printf("point %d: ", i/3);
         print(vec3(vp_cube[i], vp_cube[i+1], vp_cube[i+2]));
@@ -158,7 +201,7 @@ int main(int argv, char** argc) {
         printf("normal %d: ", i/3);
         print(vec3(vn_cube[i], vn_cube[i+1], vn_cube[i+2]));
         printf("\n");
-    }
+    }*/
     
 
 	//GLuint vao;
@@ -207,6 +250,29 @@ int main(int argv, char** argc) {
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_TRUE, 0, NULL);
         glEnableVertexAttribArray(3);
     }
+
+    // TODO: remove this copy!
+    if (NULL != vp_cube2) {
+        glGenBuffers(1 , &points_vbo_cube2);
+		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube2);
+		glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count_cube2*sizeof(GLfloat), 
+                     vp_cube2,
+					 GL_STATIC_DRAW);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(4);
+	} 
+    if (NULL != vn_cube) {
+        glGenBuffers(1, &normals_vbo_cube2);
+        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube2);
+        glBufferData(GL_ARRAY_BUFFER, 
+                     3*point_count_cube2*sizeof(GLfloat),
+                     vn_cube2,
+                     GL_STATIC_DRAW);
+        glVertexAttribPointer(5, 3, GL_FLOAT, GL_TRUE, 0, NULL);
+        glEnableVertexAttribArray(5);
+    }// END COPY
+
     
     /* 
     GLuint verticies_vbo_rect;
@@ -232,6 +298,8 @@ int main(int argv, char** argc) {
     fs_grid = compile_shader("grid_fs.glsl", GL_FRAGMENT_SHADER);
     vs_cube = compile_shader("cube_vs.glsl", GL_VERTEX_SHADER);
     fs_cube = compile_shader("cube_fs.glsl", GL_FRAGMENT_SHADER);
+    vs_cube2 = compile_shader("cube_vs2.glsl", GL_VERTEX_SHADER);
+    fs_cube2 = compile_shader("cube_fs2.glsl", GL_FRAGMENT_SHADER);
 
     shaders_ground = new GLuint[2];
     shaders_ground[0] = vs_ground;
@@ -251,10 +319,18 @@ int main(int argv, char** argc) {
     shader_program_cube = link_shaders(shaders_cube, 2);
     assert(program_is_valid(shader_program_cube));
 
+    shaders_cube2 = new GLuint[2];
+    shaders_cube2[0] = vs_cube2;
+    shaders_cube2[1] = fs_cube2;
+    shader_program_cube2 = link_shaders(shaders_cube2, 2);
+    assert(program_is_valid(shader_program_cube2));
+
+
     programs = new GLuint[NUM_SHADER_PROGRAMS];
     programs[0] = shader_program_ground;
     programs[1] = shader_program_grid;
     programs[2] = shader_program_cube;
+    programs[3] = shader_program_cube2;
 
     // get Uniform variable locations from shaders:
     model_mat_location_ground = glGetUniformLocation(shader_program_ground, 
@@ -275,6 +351,13 @@ int main(int argv, char** argc) {
                                                      "view");
     proj_mat_location_cube    = glGetUniformLocation(shader_program_cube, 
                                                      "proj");
+    model_mat_location_cube2   = glGetUniformLocation(shader_program_cube2, 
+                                                     "model");
+    view_mat_location_cube2    = glGetUniformLocation(shader_program_cube2, 
+                                                     "view");
+    proj_mat_location_cube2    = glGetUniformLocation(shader_program_cube2, 
+                                                     "proj");
+
     
 
     // free unneeded memory used when making shaders:
@@ -320,6 +403,12 @@ int main(int argv, char** argc) {
     glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
     glUniformMatrix4fv(proj_mat_location_cube, 1, GL_FALSE, proj_mat.m);
 
+    glUseProgram(shader_program_cube2);
+    glUniformMatrix4fv(view_mat_location_cube2, 1, GL_FALSE, view_mat.m);
+    glUniformMatrix4fv(proj_mat_location_cube2, 1, GL_FALSE, proj_mat.m);
+
+
+
 	// unique model matrix for each plane
 	mat4 model_mats_plane[NUM_PLANES];
 	for (int i=0; i<NUM_PLANES; i++) {
@@ -333,8 +422,8 @@ int main(int argv, char** argc) {
 
 	glEnable(GL_DEPTH_TEST);  // enable depth-testing
 	glDepthFunc(GL_LESS);     // interpret a smaller value as "closer"
-	//glEnable(GL_CULL_FACE);	  // enable face culling
-	//glCullFace(GL_BACK);	  // cull back face
+	glEnable(GL_CULL_FACE);	  // enable face culling
+	glCullFace(GL_BACK);	  // cull back face
 	glFrontFace(GL_CCW);      // set CCW vertex order to mean the front
 	glClearColor(0.8, 0.8, 0.8, 1.0); // grey background
     /* --- END RENDER SETTINGS --- */
@@ -342,6 +431,7 @@ int main(int argv, char** argc) {
     /* --- RENDER LOOP --- */
     // continually draw until window is closed 
     int prog_counter = 0;
+    int prog_counter2 = 0;
     while (!glfwWindowShouldClose(g_window)) {
 
         // timer for doing animation:
@@ -377,10 +467,15 @@ int main(int argv, char** argc) {
         glUseProgram(shader_program_cube);
         // draw each cube:
         for (int i=0; i<NUM_CUBES; i++) {
+            if (i==0)
+                glUseProgram(shader_program_cube);
+            else
+                glUseProgram(shader_program_cube2);
+
             glUniformMatrix4fv(model_mat_location_cube,
-                              1,
-                              GL_FALSE,
-                              model_mats_cube[i].m
+                               1,
+                               GL_FALSE,
+                               model_mats_cube[i].m
                               );
             glDrawArrays(GL_TRIANGLES, 0, point_count_cube);
         }
@@ -429,6 +524,31 @@ int main(int argv, char** argc) {
                     vn_cube,
                     GL_DYNAMIC_DRAW);
 
+        // TODO: remove copy!
+        if (prog_counter2 + (3*point_count_cube2) < prog_size2) {
+            for (int i=0; i<(3*point_count_cube2); i++) {
+                vp_cube2[i] = progression2[prog_counter2++];
+                //printf("%f\n", progression[i]);
+            }
+
+            // update normals
+            calculate_normals_from_points(vp_cube2, vn_cube2, point_count_cube2);
+        }
+        prog_counter2+=(3*point_count_cube2)*(SPEED-1);
+
+        glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube2);
+        glBufferData(GL_ARRAY_BUFFER, 
+                    3*point_count_cube2*sizeof(GLfloat), 
+                    vp_cube2,
+                    GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube2);
+        glBufferData(GL_ARRAY_BUFFER, 
+                    3*point_count_cube2*sizeof(GLfloat), 
+                    vn_cube2,
+                    GL_DYNAMIC_DRAW);
+        // END COPY
+
+        
                     
         } // END IF SPACE IS PRESSED
 
@@ -570,6 +690,8 @@ int main(int argv, char** argc) {
             glUniformMatrix4fv(view_mat_location_grid, 1, GL_FALSE, view_mat.m);
             glUseProgram(shader_program_cube);
             glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
+            glUseProgram(shader_program_cube2);
+            glUniformMatrix4fv(view_mat_location_cube2, 1, GL_FALSE, view_mat.m);
 		}
 
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {
