@@ -72,16 +72,19 @@ int main(int argv, char** argc) {
     vec3 cam_pos(CAM_START_POS);
 
     // a world position for each cube in the scene
-    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.5, 0.0 ),
-                              vec3( 0.0, -0.5, 0.0 ),
-							  vec3( -1.0, -1.0, 0.0 ), 
-                              vec3( 1.0, -1.0, 0.0 ), 
-                              vec3( -1.0, 1.0, 0.0),
-                              vec3(1.0, 0.0, 0.0),
-                              vec3(-1.0, 0.0, 0.0),
-                              vec3(0.0, 1.0, 0.0),
-                              vec3(0.0, -1.0, 0.0),
-                              vec3(-0.5, 0.5, 0.0)
+    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 0.1 ),
+                              vec3( 0.0, -0.4, 0.1 ),
+							  vec3( -0.4, 0.0, 0.1 ), 
+                              vec3( -0.4, -0.4, 0.1 ), 
+                              vec3( 0.0, 0.0, 0.3),
+                              vec3(0.0, -0.4, 0.3),
+                              vec3(-0.4, 0.0, 0.3),
+                              vec3(-0.4, -0.4, 0.3),
+                              vec3(-0.2, -0.2, 0.3),
+                              vec3(-0.0, -0.2, 0.3),
+                              vec3(-0.2, 0.0, 0.3),
+                              vec3(-0.4, -0.2, 0.3),
+                              vec3(-0.2, -0.4, 0.3)
     };
     // world position for each plane
     vec3 plane_pos_wor[] = { vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.002) };
@@ -126,6 +129,10 @@ int main(int argv, char** argc) {
                           0.0, -1.0, 0.0,
                           0.0, -1.0, 0.0 };
     point_count_cube = 3; */
+    
+    int n;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &n);
+    printf("n: %d\n", n);
 
     // read bouncing/breathing data from file:
     FILE *fp = fopen("../0cubes_ga.txt", "r");
