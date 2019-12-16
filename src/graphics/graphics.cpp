@@ -24,7 +24,7 @@
 #include "vboindexer.hpp"
 #include "objloader.hpp"
 
-#define CUBE_FILE "../../res/temp.obj"
+#define CUBE_FILE "../../res/vs.obj"
 #define PLANE_FILE "../../res/plane.obj"
 //#define NUM_CUBES 4
 #define NUM_PLANES 2
@@ -136,17 +136,19 @@ int main(int argv, char** argc) {
     
 
     // read bouncing/breathing data from file:
-    FILE *fp = fopen("../vs-walk-16-01-35.txt", "r");
+    FILE *fp = fopen("../vs-bounce-16-04-34.txt", "r");
     if (fp == NULL) {
         fprintf(stderr, "could not open progession file");
         return 1;
     }
     // get number of iterations:
     int num_iterations = 0;
-    char line[4096];
+    char line[128];
     while (fgets(line, sizeof(line), fp)) {
-        num_iterations++;
+        if (strncmp(line, "E", 1) == 0)
+            num_iterations++;
     }
+    printf("num iterations: %d\n", num_iterations);
     // load the points into an array
     float* progression = new float[num_iterations * point_count_cube * 3];
     int prog_size = num_iterations * point_count_cube * 3;
@@ -154,11 +156,12 @@ int main(int argv, char** argc) {
     char* tok;
     int counter = 0;
     while (fgets(line, sizeof(line), fp)) {
-        //printf("%s\n", line);
-        tok = strtok(line, ",");
-        while (NULL != tok) {
-            progression[counter++] = atof(tok);
-            tok = strtok(NULL, ",");
+        if (strncmp(line, "E", 1) != 0) {
+            tok = strtok(line, ",");
+            while (NULL != tok  && strcmp(tok, "\n") != 0) {
+                progression[counter++] = atof(tok);
+                tok = strtok(NULL, ",");
+            }
         }
     }
 
@@ -445,8 +448,12 @@ int main(int argv, char** argc) {
 
             // update normals
             calculate_normals_from_points(vp_cube, vn_cube, point_count_cube);
+
+            prog_counter+=(3*point_count_cube)*(SPEED-1);
         }
-        prog_counter+=(3*point_count_cube)*(SPEED-1);
+        else {
+            prog_counter = 0;
+        }
 
         glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube);
         glBufferData(GL_ARRAY_BUFFER, 
