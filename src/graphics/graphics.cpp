@@ -21,7 +21,10 @@
 #include "maths_funcs.hpp"
 #include "obj_parser.hpp"
 
-#define CUBE_FILE "../../res/cube.obj"
+#include "vboindexer.hpp"
+#include "objloader.hpp"
+
+#define CUBE_FILE "../../res/temp.obj"
 #define PLANE_FILE "../../res/plane.obj"
 //#define NUM_CUBES 4
 #define NUM_PLANES 2
@@ -30,14 +33,14 @@
 
 #define CAM_START_POS 0.5f, -0.0f, 3.0f
 
-#define SPEED 10
+#define SPEED 1
 
 int main(int argv, char** argc) {
 
-    int NUM_CUBES = 2;
+    int NUM_CUBES = 1;
 
     GLuint points_vbo_plane, normals_vbo_plane;
-    GLuint points_vbo_cube, normals_vbo_cube;
+    GLuint points_vbo_cube, normals_vbo_cube, tex_vbo_cube;
     GLuint points_vbo_cube2, normals_vbo_cube2;
     GLuint vao;
     GLuint vs_ground, fs_ground;
@@ -72,7 +75,7 @@ int main(int argv, char** argc) {
     vec3 cam_pos(CAM_START_POS);
 
     // a world position for each cube in the scene
-    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 0.1 ),
+    vec3 cube_pos_wor[] = {   vec3( 0.0, 0.0, 0.0 ),
                               vec3( 0.0, -0.4, 0.1 ),
 							  vec3( -0.4, 0.0, 0.1 ), 
                               vec3( -0.4, -0.4, 0.1 ), 
@@ -111,7 +114,7 @@ int main(int argv, char** argc) {
 
     // initialize GLFW3 and GLEW
     start_gl(); 
-
+    
     // only draw a pixel if the shape is closest to the viewer:
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -119,8 +122,9 @@ int main(int argv, char** argc) {
     load_obj_file(PLANE_FILE, vp_plane, vt_plane, vn_plane, point_count_plane);
     load_obj_file(CUBE_FILE,  vp_cube,  vt_cube,  vn_cube,  point_count_cube);
     // quick thing just to get it working by tonight
-    load_obj_file(CUBE_FILE, vp_cube2, vt_cube2, vn_cube2, point_count_cube2);
+    //load_obj_file(CUBE_FILE, vp_cube2, vt_cube2, vn_cube2, point_count_cube2);
     
+
     /* TRIANGLE FOR TESTING
     GLfloat vp_cube[] = { 0.0, 0.0, 0.0,
                           0.1, 0.0, 0.0,
@@ -130,12 +134,9 @@ int main(int argv, char** argc) {
                           0.0, -1.0, 0.0 };
     point_count_cube = 3; */
     
-    int n;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &n);
-    printf("n: %d\n", n);
 
     // read bouncing/breathing data from file:
-    FILE *fp = fopen("../0cubes_ga.txt", "r");
+    FILE *fp = fopen("../vs-walk-16-01-35.txt", "r");
     if (fp == NULL) {
         fprintf(stderr, "could not open progession file");
         return 1;
@@ -161,41 +162,9 @@ int main(int argv, char** argc) {
         }
     }
 
-    // TODO: Delete/Consolidate later - this is just a copy of the above:
-    // read bouncing/breathing data from file:
-    FILE *fp2 = fopen("../3cubes_ga.txt", "r");
-    if (fp2 == NULL) {
-        fprintf(stderr, "could not open progession file 2");
-        return 1;
-    }
-    // get number of iterations:
-    int num_iterations2 = 0;
-    char line2[4096];
-    while (fgets(line2, sizeof(line2), fp2)) {
-        num_iterations2++;
-    }
-    // load the points into an array
-    float* progression2 = new float[num_iterations2 * point_count_cube2 * 3];
-    int prog_size2 = num_iterations2 * point_count_cube2 * 3;
-    fseek(fp2, 0L, SEEK_SET);
-    char* tok2;
-    int counter2 = 0;
-    while (fgets(line2, sizeof(line2), fp2)) {
-        //printf("%s\n", line);
-        tok2 = strtok(line2, ",");
-        while (NULL != tok2) {
-            progression2[counter2++] = atof(tok2);
-            tok2 = strtok(NULL, ",");
-        }
-    }
-    //END COPY
+    
 
 
-    /*
-    for (int i=0; i<prog_size; i++) {
-        printf("%f\n", progression[i]);
-    }*/
-     
     // print all points for debugging
     /*
     for (int i=0; i<point_count_cube*3; i+=3) {
@@ -212,10 +181,13 @@ int main(int argv, char** argc) {
     
 
 	//GLuint vao;
+    
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
+    
 
     // load points into GPU using Vertex Buffer Object (vbo):
+    
     if (NULL != vp_plane) {
 		glGenBuffers(1 , &points_vbo_plane);
 		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_plane);
@@ -257,47 +229,20 @@ int main(int argv, char** argc) {
         glVertexAttribPointer(3, 3, GL_FLOAT, GL_TRUE, 0, NULL);
         glEnableVertexAttribArray(3);
     }
-
-    // TODO: remove this copy!
-    if (NULL != vp_cube2) {
-        glGenBuffers(1 , &points_vbo_cube2);
-		glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube2);
-		glBufferData(GL_ARRAY_BUFFER, 
-                     3*point_count_cube2*sizeof(GLfloat), 
-                     vp_cube2,
-					 GL_STATIC_DRAW);
-		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-		glEnableVertexAttribArray(4);
-	} 
-    if (NULL != vn_cube) {
-        glGenBuffers(1, &normals_vbo_cube2);
-        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube2);
+    if (NULL != vt_cube) {
+        glGenBuffers(1, &tex_vbo_cube);
+        glBindBuffer(GL_ARRAY_BUFFER, tex_vbo_cube);
         glBufferData(GL_ARRAY_BUFFER, 
-                     3*point_count_cube2*sizeof(GLfloat),
-                     vn_cube2,
+                     2*point_count_cube*sizeof(GLfloat),
+                     vt_cube,
                      GL_STATIC_DRAW);
-        glVertexAttribPointer(5, 3, GL_FLOAT, GL_TRUE, 0, NULL);
-        glEnableVertexAttribArray(5);
-    }// END COPY
+        glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+        glEnableVertexAttribArray(4);
+    }
 
+
+        
     
-    /* 
-    GLuint verticies_vbo_rect;
-    glGenBuffers(1, &verticies_vbo_rect);
-    glBindBuffer(GL_ARRAY_BUFFER, verticies_vbo_rect);
-    glBufferData(GL_ARRAY_BUFFER,
-                    3*8*sizeof(GLfloat),
-                    rectangle_points,
-                    GL_STATIC_DRAW);
-    GLuint indicies_vbo_rect;
-    glGenBuffers(1, &indicies_vbo_rect);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicies_vbo_rect);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
-                    sizeof(rectangle_indicies), rectangle_indicies,
-                    GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    */
-
     // get shaders from files, compile, and link:
     vs_ground = compile_shader("ground_vs.glsl", GL_VERTEX_SHADER);
     vs_grid = compile_shader("grid_vs.glsl", GL_VERTEX_SHADER);
@@ -305,8 +250,8 @@ int main(int argv, char** argc) {
     fs_grid = compile_shader("grid_fs.glsl", GL_FRAGMENT_SHADER);
     vs_cube = compile_shader("cube_vs.glsl", GL_VERTEX_SHADER);
     fs_cube = compile_shader("cube_fs.glsl", GL_FRAGMENT_SHADER);
-    vs_cube2 = compile_shader("cube_vs2.glsl", GL_VERTEX_SHADER);
-    fs_cube2 = compile_shader("cube_fs2.glsl", GL_FRAGMENT_SHADER);
+    //vs_cube2 = compile_shader("cube_vs2.glsl", GL_VERTEX_SHADER);
+    //fs_cube2 = compile_shader("cube_fs2.glsl", GL_FRAGMENT_SHADER);
 
     shaders_ground = new GLuint[2];
     shaders_ground[0] = vs_ground;
@@ -326,18 +271,19 @@ int main(int argv, char** argc) {
     shader_program_cube = link_shaders(shaders_cube, 2);
     assert(program_is_valid(shader_program_cube));
 
+    /*
     shaders_cube2 = new GLuint[2];
     shaders_cube2[0] = vs_cube2;
     shaders_cube2[1] = fs_cube2;
     shader_program_cube2 = link_shaders(shaders_cube2, 2);
-    assert(program_is_valid(shader_program_cube2));
+    assert(program_is_valid(shader_program_cube2));*/
 
 
     programs = new GLuint[NUM_SHADER_PROGRAMS];
     programs[0] = shader_program_ground;
     programs[1] = shader_program_grid;
     programs[2] = shader_program_cube;
-    programs[3] = shader_program_cube2;
+    //programs[3] = shader_program_cube2;
 
     // get Uniform variable locations from shaders:
     model_mat_location_ground = glGetUniformLocation(shader_program_ground, 
@@ -358,12 +304,13 @@ int main(int argv, char** argc) {
                                                      "view");
     proj_mat_location_cube    = glGetUniformLocation(shader_program_cube, 
                                                      "proj");
+    /*
     model_mat_location_cube2   = glGetUniformLocation(shader_program_cube2, 
                                                      "model");
     view_mat_location_cube2    = glGetUniformLocation(shader_program_cube2, 
                                                      "view");
     proj_mat_location_cube2    = glGetUniformLocation(shader_program_cube2, 
-                                                     "proj");
+                                                     "proj");*/
 
     
 
@@ -410,11 +357,6 @@ int main(int argv, char** argc) {
     glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
     glUniformMatrix4fv(proj_mat_location_cube, 1, GL_FALSE, proj_mat.m);
 
-    glUseProgram(shader_program_cube2);
-    glUniformMatrix4fv(view_mat_location_cube2, 1, GL_FALSE, view_mat.m);
-    glUniformMatrix4fv(proj_mat_location_cube2, 1, GL_FALSE, proj_mat.m);
-
-
 
 	// unique model matrix for each plane
 	mat4 model_mats_plane[NUM_PLANES];
@@ -438,7 +380,6 @@ int main(int argv, char** argc) {
     /* --- RENDER LOOP --- */
     // continually draw until window is closed 
     int prog_counter = 0;
-    int prog_counter2 = 0;
     while (!glfwWindowShouldClose(g_window)) {
 
         // timer for doing animation:
@@ -461,6 +402,8 @@ int main(int argv, char** argc) {
                            model_mats_plane[0].m
                           );
         glDrawArrays(GL_TRIANGLES, 0, point_count_plane);
+        // DONE Drawing ground
+        
 
         // draw grid:
         glUseProgram(shader_program_grid);
@@ -469,15 +412,14 @@ int main(int argv, char** argc) {
                            GL_FALSE,
                            model_mats_plane[1].m
                           );
+
         glDrawArrays(GL_LINE_LOOP, 0, point_count_plane);
+
 
         glUseProgram(shader_program_cube);
         // draw each cube:
         for (int i=0; i<NUM_CUBES; i++) {
-            if (i==0)
-                glUseProgram(shader_program_cube);
-            else
-                glUseProgram(shader_program_cube2);
+            glUseProgram(shader_program_cube);
 
             glUniformMatrix4fv(model_mat_location_cube,
                                1,
@@ -491,7 +433,9 @@ int main(int argv, char** argc) {
         glBindVertexArray(vao);
         
         // IF SPACE IS PRESSED
+        
         if (glfwGetKey(g_window, GLFW_KEY_SPACE)) {
+        
         
         if (prog_counter + (3*point_count_cube) < prog_size) {
             for (int i=0; i<(3*point_count_cube); i++) {
@@ -501,22 +445,6 @@ int main(int argv, char** argc) {
 
             // update normals
             calculate_normals_from_points(vp_cube, vn_cube, point_count_cube);
-            /*
-            for (int i=0; i<point_count_cube; i+=9) {
-                vec3 p1 = vec3(vp_cube[i+0], vp_cube[i+1], vp_cube[i+2]);
-                vec3 p2 = vec3(vp_cube[i+3], vp_cube[i+4], vp_cube[i+5]);
-                vec3 p3 = vec3(vp_cube[i+6], vp_cube[i+7], vp_cube[i+8]);
-
-                vec3 u = p2 - p1;
-                vec3 v = p3 - p1;
-                vec3 n = normalise(cross(u, v));
-
-                for (int j=0; j<3; j++) {
-                    vn_cube[i+0+(3*j)] = n.v[0];
-                    vn_cube[i+1+(3*j)] = n.v[1];
-                    vn_cube[i+2+(3*j)] = n.v[2];
-                }
-            }*/
         }
         prog_counter+=(3*point_count_cube)*(SPEED-1);
 
@@ -530,33 +458,14 @@ int main(int argv, char** argc) {
                     3*point_count_cube*sizeof(GLfloat), 
                     vn_cube,
                     GL_DYNAMIC_DRAW);
-
-        // TODO: remove copy!
-        if (prog_counter2 + (3*point_count_cube2) < prog_size2) {
-            for (int i=0; i<(3*point_count_cube2); i++) {
-                vp_cube2[i] = progression2[prog_counter2++];
-                //printf("%f\n", progression[i]);
-            }
-
-            // update normals
-            calculate_normals_from_points(vp_cube2, vn_cube2, point_count_cube2);
-        }
-        prog_counter2+=(3*point_count_cube2)*(SPEED-1);
-
-        glBindBuffer(GL_ARRAY_BUFFER, points_vbo_cube2);
+        glBindBuffer(GL_ARRAY_BUFFER, tex_vbo_cube);
         glBufferData(GL_ARRAY_BUFFER, 
-                    3*point_count_cube2*sizeof(GLfloat), 
-                    vp_cube2,
+                    2*point_count_cube*sizeof(GLfloat), 
+                    vt_cube,
                     GL_DYNAMIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, normals_vbo_cube2);
-        glBufferData(GL_ARRAY_BUFFER, 
-                    3*point_count_cube2*sizeof(GLfloat), 
-                    vn_cube2,
-                    GL_DYNAMIC_DRAW);
-        // END COPY
 
-        
-                    
+
+                           
         } // END IF SPACE IS PRESSED
 
 
@@ -697,8 +606,6 @@ int main(int argv, char** argc) {
             glUniformMatrix4fv(view_mat_location_grid, 1, GL_FALSE, view_mat.m);
             glUseProgram(shader_program_cube);
             glUniformMatrix4fv(view_mat_location_cube, 1, GL_FALSE, view_mat.m);
-            glUseProgram(shader_program_cube2);
-            glUniformMatrix4fv(view_mat_location_cube2, 1, GL_FALSE, view_mat.m);
 		}
 
         if (GLFW_PRESS == glfwGetKey(g_window, GLFW_KEY_ESCAPE)) {

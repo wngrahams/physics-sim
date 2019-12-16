@@ -10,14 +10,14 @@ LDFLAGS = -g -lstdc++ -framework Cocoa -framework OpenGL -framework IOKit -L/usr
 LDLIBS  = -lGLEW -lglfw
 
 executables = graphics
-objects = gl-utils.o graphics.o maths_funcs.o obj_parser.o camera.o
+objects = gl-utils.o graphics.o maths_funcs.o obj_parser.o camera.o vboindexer.o objloader.p
 
 .PHONY: default
 default: $(executables)
 
-$(executables): gl-utils.o maths_funcs.o obj_parser.o camera.o
+$(executables): gl-utils.o maths_funcs.o obj_parser.o camera.o vboindexer.o objloader.o
 
-$(objects): gl-utils.h maths_funcs.hpp obj_parser.hpp camera.hpp
+$(objects): gl-utils.h maths_funcs.hpp obj_parser.hpp camera.hpp vboindexer.hpp objloader.hpp
 
 .PHONY: clean
 clean:

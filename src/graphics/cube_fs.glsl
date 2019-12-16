@@ -1,6 +1,6 @@
 #version 410
 
-in vec3 pos_eye, norm_eye;
+in vec3 pos_eye, norm_eye, pass_color;
 
 uniform mat4 view_mat;
 
@@ -12,7 +12,7 @@ vec3 La = vec3 (0.3, 0.3, 0.3); // gray ambient colour
   
 // surface reflectance
 vec3 Ks = vec3 (1.0, 1.0, 1.0); // fully reflect specular light
-vec3 Kd = vec3 (1.0, 0.5, 0.0); // orange diffuse surface reflectance
+vec3 Kd = pass_color; //vec3 (1.0, 0.5, 0.0); // orange diffuse surface reflectance
 vec3 Ka = vec3 (1.0, 1.0, 1.0); // fully reflect ambient light
 float specular_exponent = 100.0; // specular 'power'
 
